@@ -307,7 +307,7 @@
     min-width: 0;
     min-height: 0;
     position: relative;
-    background: #000;
+   background: transparent;
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -357,7 +357,13 @@
     letter-spacing: 0.5px;
   }
 
-  #main-canvas { height:100%; display:block; }
+  #main-canvas { 
+  height: 100%; 
+  display: block;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
 
   /* ── DRAG LAYER — absolute inside canvas-wrap ── */
   #drag-layer {
@@ -600,6 +606,26 @@
     text-overflow: ellipsis;
     max-width: 160px;
   }
+  #bg-frame {
+position: absolute;
+  top: 65%;
+ left: 80%;
+  transform: translate(-50%, -50%);
+  width: 590px;
+  height: 410px;
+  border: none;
+  z-index: 0;
+  pointer-events: none;
+  scale: 2.5;
+    opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+#main-canvas {
+  background: transparent !important;
+  position: relative;
+  z-index: 1;
+}
 </style>
 </head>
 <body>
@@ -639,6 +665,13 @@
 
     <!-- CANVAS AREA -->
     <div class="canvas-wrap">
+      <div class="background-center">
+        <iframe id="bg-frame"
+        src="session1/eca_scr_1_kp_00_back/eca_scr_1_kp_00_back.html"
+        allowtransparency="true"
+        scrolling="no">
+      </iframe>
+      </div>
       <canvas id="main-canvas" width="590" height="410"></canvas>
       <div id="drag-layer"></div>
       <div id="feedback"></div>
@@ -776,6 +809,18 @@ let isShowingFrame      = false;
 const sessionFrame = document.getElementById("session-frame");
 const frameLoading = document.getElementById("frame-loading");
 const sessionLabel = document.getElementById("session-label");
+
+function showBackground() {
+  const bg = document.getElementById("bg-frame");
+  bg.style.opacity = "1";
+  bg.style.visibility = "visible";
+}
+
+function hideBackground() {
+  const bg = document.getElementById("bg-frame");
+  bg.style.opacity = "0";
+  bg.style.visibility = "hidden";
+}
 
 function loadSessionInFrame(url, name, idx) {
   player.pause();
@@ -1134,7 +1179,16 @@ const player = {
       all.push(new Promise(res => {
         img.onload  = () => res({ i, img });
         img.onerror = () => res({ i, img: null });
-        img.src = FRAMES_PATH + i + ".svg";
+        fetch(FRAMES_PATH + i + ".svg")
+  .then(res => res.text())
+  .then(svgText => {
+    const cleaned = svgText
+      .replace(/<rect[^>]*fill="[^"]*"[^>]*>/gi, '') // remove background rect
+      .replace(/background:[^;"']+/gi, 'background:none');
+
+    const blob = new Blob([cleaned], { type: "image/svg+xml" });
+    img.src = URL.createObjectURL(blob);
+  });
       }));
     }
     (await Promise.all(all)).forEach(({ i, img }) => { if (img) this.frames[i] = img; });
@@ -1190,6 +1244,7 @@ const player = {
     wrap.classList.remove("enabled"); wrap.classList.add("disabled-next"); wrap.style.cursor = "default";
     this.drawFrame(1);
     setTimeout(() => this.play(), 200);
+    hideBackground();
   },
 
   startQuestion(fn) {
@@ -1309,7 +1364,14 @@ document.getElementById("btn-listen").onclick = () => {
 };
 
 document.getElementById("btn-playpause").onclick = () => {
-  if (!isShowingFrame) { player.isPlaying ? player.pause() : player.play(); }
+  if (!isShowingFrame) {
+    if (player.isPlaying) {
+      player.pause();
+    } else {
+      showBackground(); 
+      player.play();
+    }
+  }
 };
 
 document.getElementById("btn-chapter").onclick  = () => toggleChapterPanel();
@@ -1366,6 +1428,7 @@ document.addEventListener("keydown", e => {
 buildChapterList();
 syncPlayPauseBtn();
 player.loadFrames();
+hideBackground();
 </script>
 </body>
 </html>
