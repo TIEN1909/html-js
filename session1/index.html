@@ -25,35 +25,37 @@
     --glow-gold:    rgba(245,158,11,0.4);
   }
 
-  html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    touch-action: none;
-  }
+ html, body {
+  width: 100%; height: 100%;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  body {
-    background: radial-gradient(ellipse at 50% 0%, #0a1840 0%, #040810 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    font-family: 'Nunito', sans-serif;
-    overflow: hidden;
-  }
+body {
+  background: radial-gradient(ellipse at 50% 0%, #0a1840 0%, #040810 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  font-family: 'Nunito', sans-serif;
+}
 
   /* ── RESPONSIVE SCALE WRAPPER ── */
   #scale-root {
     /* Base design size: 800×625 */
-    width: 800px;
-    height: 625px;
+   width: 100vw;
+  height: 100vh;
     transform-origin: center center;
     position: relative;
     flex-shrink: 0;
   }
 
   .shell {
-    width: 800px;
-    height: 625px;
+ width: 100vw;
+  height: 120vh;
     background: linear-gradient(160deg, #0f1e50 0%, #080e24 100%);
     border-radius: 24px;
     border: 1px solid rgba(59,130,246,0.25);
@@ -65,7 +67,6 @@
       inset 0 0 80px rgba(59,130,246,0.04);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     position: relative;
     contain: layout size;
   }
@@ -724,10 +725,8 @@ const DESIGN_W = 800, DESIGN_H = 625;
 function applyScale() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const scale = Math.min(vw / DESIGN_W, vh / DESIGN_H, 1); // never upscale beyond 1×
   const root = document.getElementById('scale-root');
-  root.style.transform = `scale(${scale})`;
-  // Centre it manually (transform-origin: center is handled by flexbox on body)
+  root.style.transform = 'none';
 }
 
 applyScale();
@@ -857,13 +856,28 @@ panImg.src = "images/48.png";
 // QUESTION DATA
 // ═══════════════════════════════════════════════
 const EGG_POSITIONS = [
-  {x:35,y:435},{x:55,y:420},{x:86,y:409},{x:85,y:441},{x:97,y:473},
-  {x:114,y:419},{x:137,y:446},{x:142,y:414},{x:168,y:432},{x:161,y:474},
+  { x: 83,  y: 608 },
+  { x: 110, y: 585 },
+  { x: 170, y: 574 },
+  { x: 168, y: 615 },
+  { x: 193, y: 659 },
+  { x: 228, y: 591 },
+  { x: 285, y: 582 },
+  { x: 269, y: 624 },
+  { x: 337, y: 607 },
+  { x: 317, y: 655 },
 ];
 const ZONE_POSITIONS = [
-  {x:267,y:106},{x:321,y:107},{x:268,y:150},{x:317,y:155},
-  {x:268,y:203},{x:317,y:202},{x:269,y:249},{x:318,y:250},
-  {x:269,y:295},{x:320,y:296},
+  { x: 534, y: 151 },
+  { x: 641, y: 151 },
+  { x: 537, y: 218 },
+  { x: 642, y: 218 },
+  { x: 537, y: 286 },
+  { x: 635, y: 285 },
+  { x: 537, y: 350 },
+  { x: 637, y: 351 },
+  { x: 533, y: 415 },
+  { x: 641, y: 414 },
 ];
 const ZONE_SIZE = 34;
 
@@ -1024,7 +1038,7 @@ function endDrag(releaseVX, releaseVY) {
 
       el.classList.add("hidden");
       el.classList.remove("dragging");
-      nextDz.innerHTML = `<img src="images/1_up.png" style="width:23px;height:23px;display:block;margin:${(ZONE_SIZE-23)/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
+      nextDz.innerHTML = `<img src="images/1_up.png" style="width:45px;height:45px;display:block;margin:${(ZONE_SIZE-45 )/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
 
       dropZoneCounter++;
       playEggSounds(dropZoneCounter);
@@ -1102,7 +1116,7 @@ function buildQuestion(fn) {
     el.dataset.value   = egg.value;
     el.style.left      = egg.x + "px";
     el.style.top       = egg.y + "px";
-    el.innerHTML       = `<img src="images/1_up.png" alt="egg" style="width:23px;height:23px;display:block;">`;
+    el.innerHTML       = `<img src="images/1_up.png" alt="egg" style="width:45px;height:45px;display:block;">`;
     // Start locked — will unlock when audio passes second 17
     if (!dragUnlocked) el.classList.add("locked-drag");
     dragLayer.appendChild(el);
