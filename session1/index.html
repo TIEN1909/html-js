@@ -883,6 +883,7 @@ function makeQuestion(fid, count, vals) {
 const QUESTIONS = { 233: makeQuestion(233, 10, [1,2,3,4,5,6,7,8,9,10]) };
 
 let dropZoneCounter = 0;
+let nextSlotIndex = 0;
 
 const audio = new Audio(AUDIO_PATH);
 audio.preload = "auto";
@@ -982,36 +983,37 @@ function endDrag(releaseVX, releaseVY) {
   const scale = getScale();
   const HIT_RADIUS = 70 * scale;
 
-  // Find nearest empty drop zone within hit radius
-  const dzEls = Array.from(document.querySelectorAll(".drop-zone:not(.filled)"));
-  let bestDz = null, bestDist = Infinity;
+  // Lấy tất cả drop zone theo thứ tự DOM (đã build đúng thứ tự 1→10)
+  const allDzEls = Array.from(document.querySelectorAll(".drop-zone"));
 
-  dzEls.forEach(dz => {
-    const r   = dz.getBoundingClientRect();
-    const dcx = r.left + r.width  / 2;
-    const dcy = r.top  + r.height / 2;
-    const d   = Math.hypot(releaseVX - dcx, releaseVY - dcy);
-    if (d < HIT_RADIUS && d < bestDist) { bestDist = d; bestDz = dz; }
-  });
+  // Tìm ô trống tiếp theo (chưa filled)
+  const nextDz = allDzEls.find(dz => !dz.classList.contains("filled"));
+  if (!nextDz) return; // tất cả đã filled
 
-  if (bestDz) {
-    // ── SNAP: animate ghost from release-viewport-pos → slot-viewport-pos ──
-    bestDz.classList.add("filled");
+  // Kiểm tra xem thả có gần vùng lưới không (dùng bounding box toàn bộ lưới)
+  // Tính bounding box bao quanh tất cả các ô
+  const dzRects = allDzEls.map(dz => dz.getBoundingClientRect());
+  const gridLeft   = Math.min(...dzRects.map(r => r.left))   - HIT_RADIUS;
+  const gridRight  = Math.max(...dzRects.map(r => r.right))  + HIT_RADIUS;
+  const gridTop    = Math.min(...dzRects.map(r => r.top))    - HIT_RADIUS;
+  const gridBottom = Math.max(...dzRects.map(r => r.bottom)) + HIT_RADIUS;
 
-    const dzRect = bestDz.getBoundingClientRect();
+  const nearGrid = releaseVX >= gridLeft && releaseVX <= gridRight &&
+                   releaseVY >= gridTop  && releaseVY <= gridBottom;
+
+  if (nearGrid) {
+    // SNAP vào ô tiếp theo
+    nextDz.classList.add("filled");
+
+    const dzRect = nextDz.getBoundingClientRect();
     const slotVX = dzRect.left + dzRect.width  / 2;
     const slotVY = dzRect.top  + dzRect.height / 2;
 
-    // Place snap ghost at the release position (no transition yet)
     snapGhost.classList.remove("flying");
     snapGhost.style.left    = releaseVX + "px";
     snapGhost.style.top     = releaseVY + "px";
     snapGhost.style.display = "block";
-
-    // Force a reflow so the starting position is painted before transition kicks in
     snapGhost.getBoundingClientRect();
-
-    // Now add transition and move to slot centre
     snapGhost.classList.add("flying");
     snapGhost.style.left = slotVX + "px";
     snapGhost.style.top  = slotVY + "px";
@@ -1020,38 +1022,29 @@ function endDrag(releaseVX, releaseVY) {
       snapGhost.classList.remove("flying");
       snapGhost.style.display = "none";
 
-      // Lock zone, hide egg, place static image
       el.classList.add("hidden");
       el.classList.remove("dragging");
-      bestDz.innerHTML = `<img src="images/1_up.png" style="width:23px;height:23px;display:block;margin:${(ZONE_SIZE-23)/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
+      nextDz.innerHTML = `<img src="images/1_up.png" style="width:23px;height:23px;display:block;margin:${(ZONE_SIZE-23)/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
 
       dropZoneCounter++;
       playEggSounds(dropZoneCounter);
-      player.onCorrectDrop(bestDz.dataset.frame);
+      player.onCorrectDrop(nextDz.dataset.frame);
     }, { once: true });
 
   } else {
-    // ── RETURN: animate egg from release point back to pan origin ──
+    // RETURN về vị trí ban đầu
     el.classList.remove("dragging", "hidden");
 
     const origin = eggOrigin[el.id];
     if (origin) {
-      // Convert release viewport coords → layer coords so the egg
-      // starts visually where the ghost was dropped
-      const scale    = getScale();
       const wrapRect = dragLayer.getBoundingClientRect();
       const fromLX   = (releaseVX - wrapRect.left) / scale;
       const fromLY   = (releaseVY - wrapRect.top)  / scale;
 
-      // 1. Kill any in-progress transition, teleport to release point
       el.classList.remove("returning");
       el.style.left = fromLX + "px";
       el.style.top  = fromLY + "px";
-
-      // 2. Force a paint at the new starting position
       el.getBoundingClientRect();
-
-      // 3. Animate back to origin
       el.classList.add("returning");
       el.style.left = origin.ox + "px";
       el.style.top  = origin.oy + "px";
@@ -1183,6 +1176,7 @@ const player = {
 
   restart() {
     this.stop(); this.score = 0; dropZoneCounter = 0;
+    nextSlotIndex = 0;
     this.isWaiting = false; this.waitingAt = null;
     dragUnlocked = false;  // re-lock until audio hits sec 17 again
     clearQuestion(); feedbackEl.textContent = "";
