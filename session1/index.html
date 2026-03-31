@@ -25,39 +25,31 @@
     --glow-gold:    rgba(245,158,11,0.4);
   }
 
- html, body {
-  width: 100%; height: 100%;
-  overflow: hidden;
-  touch-action: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-  body {
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
     background: radial-gradient(ellipse at 50% 0%, #0a1840 0%, #040810 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100vw;
-  height: 100vh;
     font-family: 'Nunito', sans-serif;
-    overflow: hidden;
   }
 
   /* ── RESPONSIVE SCALE WRAPPER ── */
+  /* Design size = 1536 × 703 (your target desktop) */
   #scale-root {
-    /* Base design size: 800×625 */
-      width: 100vw;
-  height: 100vh;
+    width: 1536px;
+    height: 700px;
     transform-origin: center center;
-    position: relative;
     flex-shrink: 0;
+    position: relative;
   }
 
   .shell {
- width: 100vw;
-  height: 100vh;
+    width: 1536px;
+    height: 700px;
     background: linear-gradient(160deg, #0f1e50 0%, #080e24 100%);
     border-radius: 24px;
     border: 1px solid rgba(59,130,246,0.25);
@@ -365,7 +357,7 @@
     letter-spacing: 0.5px;
   }
 
-  #main-canvas {height:100%; display:block; }
+  #main-canvas { height:100%; display:block; }
 
   /* ── DRAG LAYER — absolute inside canvas-wrap ── */
   #drag-layer {
@@ -387,10 +379,8 @@
   .egg img { width:100%; height:100%; pointer-events:none; display:block; }
   .egg.dragging { cursor:grabbing; z-index:100; }
   .egg.hidden { opacity:0; pointer-events:none; }
-  /* locked state — before audio reaches sec 17 */
   .egg.locked-drag { cursor: not-allowed; pointer-events: none; opacity: 0.5; }
 
-  /* Snap ghost — flies from drop-point to slot centre */
   #snap-ghost {
     position: fixed;
     width: 32px; height: 32px;
@@ -406,7 +396,6 @@
                 top  0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Return animation — egg slides back to its pan position */
   .egg.returning {
     transition: left 0.3s cubic-bezier(0.22, 1, 0.36, 1),
                 top  0.3s cubic-bezier(0.22, 1, 0.36, 1);
@@ -424,13 +413,12 @@
     z-index:25;
   }
   .drop-zone.active {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
   .drop-zone.filled { pointer-events:none; }
 
-  /* Ghost element while dragging */
   #drag-ghost {
     position: fixed;
     width: 32px; height: 32px;
@@ -616,9 +604,7 @@
 </head>
 <body>
 
-<!-- Ghost element — moves with cursor/finger during drag -->
 <div id="drag-ghost"><img src="images/1_up.png" alt=""></div>
-<!-- Snap ghost — animates from release point into slot -->
 <div id="snap-ghost"><img src="images/1_up.png" alt=""></div>
 
 <!-- EXIT CONFIRM MODAL -->
@@ -634,7 +620,7 @@
   </div>
 </div>
 
-<!-- SCALE ROOT — all UI lives inside here -->
+<!-- SCALE ROOT -->
 <div id="scale-root">
 <div class="shell">
 
@@ -688,7 +674,6 @@
         </svg>
       </button>
 
-      <!-- Chapter slide-out panel -->
       <div class="chapter-panel" id="chapter-panel">
         <div class="chapter-panel-header">
           <span class="chapter-panel-title">Chọn chương</span>
@@ -722,24 +707,40 @@
 
 <script>
 // ═══════════════════════════════════════════════════
-// RESPONSIVE SCALE — keeps 800×625 design centered
-// and scales uniformly to fit any viewport
+// RESPONSIVE SCALE
+// Design canvas: 1536 × 703  (your target desktop)
+// On smaller viewports the whole shell scales down
+// uniformly so nothing breaks.
 // ═══════════════════════════════════════════════════
-const DESIGN_W = 800, DESIGN_H = 625;
+const DESIGN_W = 1536;
+const DESIGN_H = 703;
 
 function applyScale() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const scale = Math.min(vw / DESIGN_W, vh / DESIGN_H); 
+
+  // Largest uniform scale that fits inside the viewport
+  const scale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+
   const root = document.getElementById('scale-root');
-  root.style.transform = 'none';
-  // Centre it manually (transform-origin: center is handled by flexbox on body)
+
+  // Always apply explicit pixel size + scale transform
+  root.style.width  = DESIGN_W + 'px';
+  root.style.height = DESIGN_H + 'px';
+  root.style.transform = 'scale(' + scale + ')';
+  root.style.transformOrigin = 'center center';
+
+  // Also size the inner .shell to match
+  const shell = root.querySelector('.shell');
+  if (shell) {
+    shell.style.width  = DESIGN_W + 'px';
+    shell.style.height = DESIGN_H + 'px';
+  }
 }
 
 applyScale();
 window.addEventListener('resize', applyScale);
-// Also fire on orientation change for mobile
-window.addEventListener('orientationchange', () => setTimeout(applyScale, 100));
+window.addEventListener('orientationchange', () => setTimeout(applyScale, 150));
 
 // ═══════════════════════════════════════════════
 // CHAPTER DATA
@@ -762,7 +763,6 @@ const STATUS_ICON  = { current:"▶", done:"✓", locked:"🔒" };
 // ═══════════════════════════════════════════════
 // GAME CONSTANTS
 // ═══════════════════════════════════════════════
-const AUDIO_PATH      = "session1/sounds/-1.mp3";
 const FRAMES_PATH     = "session1/frames/";
 const SOUNDS_PATH     = "session1/sounds/";
 const TOTAL_FRAMES    = 415;
@@ -824,8 +824,7 @@ function updateChapterListActive(activeIdx) {
 }
 
 // ═══════════════════════════════════════════════
-// DRAG UNLOCK — eggs can only be dragged after
-// lessonAudio passes SEGMENT_A_END (second 17)
+// DRAG UNLOCK
 // ═══════════════════════════════════════════════
 let dragUnlocked = false;
 
@@ -851,7 +850,6 @@ lessonAudio.addEventListener("timeupdate", () => {
   if (!lessonAudio._waiting && lessonAudio.currentTime >= SEGMENT_A_END) {
     lessonAudio.pause();
     lessonAudio._waiting = true;
-    // Unlock egg dragging now that the intro narration is done
     setDragLocked(false);
   }
 });
@@ -906,6 +904,7 @@ const QUESTIONS = { 233: makeQuestion(233, 10, [1,2,3,4,5,6,7,8,9,10]) };
 let dropZoneCounter = 0;
 let nextSlotIndex = 0;
 
+const AUDIO_PATH = "session1/sounds/lesson_audio.mp3";
 const audio = new Audio(AUDIO_PATH);
 audio.preload = "auto";
 
@@ -923,26 +922,22 @@ const dragLayer  = document.getElementById("drag-layer");
 const feedbackEl = document.getElementById("feedback");
 
 // ═══════════════════════════════════════════════
-// DRAG & DROP — ghost-based snap, return-to-pan
+// DRAG & DROP
 // ═══════════════════════════════════════════════
-
 const ghost     = document.getElementById("drag-ghost");
 const snapGhost = document.getElementById("snap-ghost");
 
-// Store original pan positions per egg id
-const eggOrigin = {};   // { [id]: { ox, oy } }  — layer px (centre)
-
-// Drag state
+const eggOrigin = {};
 const DS = { el: null };
 
 function getScale() {
-  return parseFloat(
-    document.getElementById('scale-root').style.transform.replace(/[^0-9.]/g,'')
-  ) || 1;
+  // Read from the transform we set in applyScale()
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  return Math.min(vw / DESIGN_W, vh / DESIGN_H);
 }
 
 function makeDraggable(el) {
-  // Record original position (centre in layer px — see .egg transform:-50%,-50%)
   eggOrigin[el.id] = {
     ox: parseFloat(el.style.left),
     oy: parseFloat(el.style.top)
@@ -967,7 +962,6 @@ function makeDraggable(el) {
 }
 
 function startDrag(el, cx, cy) {
-  // If egg is mid-return animation, cancel it and snap to origin immediately
   if (el.classList.contains("returning")) {
     el.classList.remove("returning");
     const origin = eggOrigin[el.id];
@@ -975,7 +969,7 @@ function startDrag(el, cx, cy) {
       el.style.left = origin.ox + "px";
       el.style.top  = origin.oy + "px";
     }
-    el.getBoundingClientRect(); // flush
+    el.getBoundingClientRect();
   }
   DS.el = el;
   el.classList.add("dragging", "hidden");
@@ -1004,15 +998,10 @@ function endDrag(releaseVX, releaseVY) {
   const scale = getScale();
   const HIT_RADIUS = 70 * scale;
 
-  // Lấy tất cả drop zone theo thứ tự DOM (đã build đúng thứ tự 1→10)
   const allDzEls = Array.from(document.querySelectorAll(".drop-zone"));
-
-  // Tìm ô trống tiếp theo (chưa filled)
   const nextDz = allDzEls.find(dz => !dz.classList.contains("filled"));
-  if (!nextDz) return; // tất cả đã filled
+  if (!nextDz) return;
 
-  // Kiểm tra xem thả có gần vùng lưới không (dùng bounding box toàn bộ lưới)
-  // Tính bounding box bao quanh tất cả các ô
   const dzRects = allDzEls.map(dz => dz.getBoundingClientRect());
   const gridLeft   = Math.min(...dzRects.map(r => r.left))   - HIT_RADIUS;
   const gridRight  = Math.max(...dzRects.map(r => r.right))  + HIT_RADIUS;
@@ -1023,7 +1012,6 @@ function endDrag(releaseVX, releaseVY) {
                    releaseVY >= gridTop  && releaseVY <= gridBottom;
 
   if (nearGrid) {
-    // SNAP vào ô tiếp theo
     nextDz.classList.add("filled");
 
     const dzRect = nextDz.getBoundingClientRect();
@@ -1042,20 +1030,16 @@ function endDrag(releaseVX, releaseVY) {
     snapGhost.addEventListener("transitionend", () => {
       snapGhost.classList.remove("flying");
       snapGhost.style.display = "none";
-
       el.classList.add("hidden");
       el.classList.remove("dragging");
       nextDz.innerHTML = `<img src="images/1_up.png" style="width:32px;height:32px;display:block;margin:${(ZONE_SIZE-32)/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
-
       dropZoneCounter++;
       playEggSounds(dropZoneCounter);
       player.onCorrectDrop(nextDz.dataset.frame);
     }, { once: true });
 
   } else {
-    // RETURN về vị trí ban đầu
     el.classList.remove("dragging", "hidden");
-
     const origin = eggOrigin[el.id];
     if (origin) {
       const wrapRect = dragLayer.getBoundingClientRect();
@@ -1124,7 +1108,6 @@ function buildQuestion(fn) {
     el.style.left      = egg.x + "px";
     el.style.top       = egg.y + "px";
     el.innerHTML       = `<img src="images/1_up.png" alt="egg" style="width:32px;height:32px;display:block;">`;
-    // Start locked — will unlock when audio passes second 17
     if (!dragUnlocked) el.classList.add("locked-drag");
     dragLayer.appendChild(el);
     makeDraggable(el);
@@ -1199,7 +1182,7 @@ const player = {
     this.stop(); this.score = 0; dropZoneCounter = 0;
     nextSlotIndex = 0;
     this.isWaiting = false; this.waitingAt = null;
-    dragUnlocked = false;  // re-lock until audio hits sec 17 again
+    dragUnlocked = false;
     clearQuestion(); feedbackEl.textContent = "";
     this.currentFrame = 0; audio.currentTime = 0;
     lessonAudio.pause(); lessonAudio.currentTime = 0; lessonAudio._waiting = false;
@@ -1249,9 +1232,6 @@ const player = {
   },
 };
 
-// ═══════════════════════════════════════════════
-// PLAY/PAUSE SYNC
-// ═══════════════════════════════════════════════
 function syncPlayPauseBtn() {
   const btn = document.getElementById("btn-playpause");
   btn.dataset.state = player.isPlaying ? "playing" : "paused";
