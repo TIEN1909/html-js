@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Numbers to 100</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --navy-deep:    #080e22;
+    --navy-mid:     #0d1a3d;
+    --navy-light:   #152250;
+    --navy-border:  #1e3278;
+    --accent-blue:  #3b82f6;
+    --accent-cyan:  #22d3ee;
+    --accent-gold:  #f59e0b;
+    --accent-green: #22c55e;
+    --accent-red:   #ef4444;
+    --text-bright:  #e2eeff;
+    --text-mid:     #93b4dc;
+    --glow-blue:    rgba(59,130,246,0.35);
+    --glow-gold:    rgba(245,158,11,0.4);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  body {
+    background: radial-gradient(ellipse at 50% 0%, #0a1840 0%, #040810 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Nunito', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── RESPONSIVE SCALE WRAPPER ── */
+  #scale-root {
+    /* Base design size: 800×625 */
+    width: 800px;
+    height: 625px;
+    transform-origin: center center;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .shell {
+    width: 800px;
+    height: 625px;
+    background: linear-gradient(160deg, #0f1e50 0%, #080e24 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(59,130,246,0.25);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 0 60px rgba(14,22,64,0.9),
+      0 30px 80px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.07),
+      inset 0 0 80px rgba(59,130,246,0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    contain: layout size;
+  }
+
+  .shell::before {
+    content:'';
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+    pointer-events:none; z-index:0; border-radius:24px;
+  }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    position: relative; z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 44px;
+    background: linear-gradient(90deg, rgba(10,20,60,0.95) 0%, rgba(20,34,80,0.95) 50%, rgba(10,20,60,0.95) 100%);
+    border-bottom: 1px solid rgba(59,130,246,0.2);
+    backdrop-filter: blur(10px);
+  }
+  .top-bar::after {
+    content:'';
+    position:absolute; bottom:0; left:10%; right:10%; height:1px;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
+  }
+  .top-bar-label {
+    font-family: 'Fredoka', cursive;
+    font-size: 15px; font-weight: 600;
+    color: var(--accent-cyan);
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 12px rgba(34,211,238,0.5);
+  }
+  .top-bar-center {
+    font-family: 'Fredoka', cursive;
+    font-size: 16px; font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+  .top-bar-right { display:flex; align-items:center; gap:10px; }
+  .screen-badge {
+    font-family: 'Fredoka', cursive;
+    font-size: 12px; font-weight: 600;
+    color: var(--accent-gold);
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 20px;
+    padding: 2px 10px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 8px rgba(245,158,11,0.4);
+  }
+  .help-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #2563eb, #1d4ed8);
+    border: 1px solid rgba(96,165,250,0.5);
+    color: #fff; font-size: 13px; font-weight: 800;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fredoka', cursive;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.15s;
+  }
+  .help-btn:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.7), inset 0 1px 0 rgba(255,255,255,0.3); transform: translateY(-1px); }
+
+  /* ── MAIN BODY ── */
+  .main-body { display:flex; flex:1 1 0; min-height:0; position:relative; z-index:1; overflow:hidden; }
+
+  /* ── SIDEBAR ── */
+  .sidebar-right {
+    width: 58px;
+    background: linear-gradient(180deg, rgba(10,20,55,0.9) 0%, rgba(6,12,30,0.9) 100%);
+    border-left: 1px solid rgba(59,130,246,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px 0 12px;
+    gap: 12px;
+    position: relative;
+  }
+
+  .side-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(.34,1.56,.64,1);
+    font-size: 0;
+    position: relative;
+    border: none; outline: none;
+  }
+  .side-btn:hover { transform: scale(1.12) translateY(-1px); }
+  .side-btn:active { transform: scale(0.95); }
+
+  .side-btn-flag {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    width: 80px;
+    height: 60px;
+    right: 8px;
+    background-image: url('session1/buttons/DefineButton2_134/1_up.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.6));
+    overflow: visible;
+  }
+  .side-btn-flag:hover {
+    filter: drop-shadow(0 4px 14px rgba(255,200,80,0.7)) brightness(1.15);
+  }
+  .side-btn-flag::after { display: none; }
+
+  .side-btn-trophy {
+    background: linear-gradient(145deg, #fcd34d 0%, #f59e0b 50%, #b45309 100%);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.35) inset, 0 -2px 0 rgba(0,0,0,0.25) inset, 0 4px 12px rgba(245,158,11,0.55), 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .side-btn-trophy::after { content:'🏆'; font-size:20px; position:absolute; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.4)); }
+
+  .sidebar-divider {
+    width: 32px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent);
+  }
+
+  .side-chapter-btn {
+    width: 40px; height: 34px;
+    border-radius: 8px;
+    background: linear-gradient(145deg, #fde68a 0%, #f59e0b 50%, #92400e 100%);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.3) inset, 0 -2px 0 rgba(0,0,0,0.25) inset, 0 4px 10px rgba(245,158,11,0.4);
+    transition: all 0.15s;
+  }
+  .side-chapter-btn:hover { transform: scale(1.1); box-shadow: 0 6px 18px rgba(245,158,11,0.6); }
+  .side-chapter-btn svg { display:block; pointer-events: none; }
+
+  /* ── CHAPTER SLIDE PANEL ── */
+  .chapter-panel {
+    position: absolute;
+    top: 0; right: 58px;
+    width: 220px;
+    height: 100%;
+    background: linear-gradient(160deg, #0f1e50 0%, #080e24 100%);
+    border: 1px solid rgba(59,130,246,0.3);
+    border-right: none;
+    border-radius: 16px 0 0 16px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(110%);
+    opacity: 0;
+    transition: transform 0.28s cubic-bezier(.34,1.1,.64,1), opacity 0.22s;
+    pointer-events: none;
+    overflow: hidden;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.55);
+  }
+  .chapter-panel.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: all;
+  }
+  .chapter-panel-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(59,130,246,0.18);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .chapter-panel-title {
+    font-family: 'Fredoka', cursive;
+    font-size: 14px; font-weight: 600;
+    color: var(--accent-cyan);
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(34,211,238,0.4);
+  }
+  .chapter-panel-close {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #f87171;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .chapter-panel-close:hover { background: rgba(239,68,68,0.3); transform: scale(1.1); }
+
+  .chapter-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .chapter-list::-webkit-scrollbar { width: 4px; }
+  .chapter-list::-webkit-scrollbar-track { background: transparent; }
+  .chapter-list::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.3); border-radius: 99px; }
+
+  .chapter-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .chapter-item:hover { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.25); }
+  .chapter-item.active { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.35); }
+  .chapter-item.locked { cursor: not-allowed; opacity: 0.4; }
+  .chapter-item.locked:hover { background: transparent; border-color: transparent; }
+
+  .chapter-num {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fredoka', cursive;
+    font-size: 13px; font-weight: 600;
+    color: var(--accent-cyan);
+    flex-shrink: 0;
+  }
+  .chapter-item.active .chapter-num {
+    background: rgba(34,211,238,0.2);
+    border-color: rgba(34,211,238,0.5);
+    box-shadow: 0 0 8px rgba(34,211,238,0.3);
+  }
+  .chapter-info { flex:1; min-width:0; }
+  .chapter-name { font-family:'Nunito',sans-serif; font-size:12px; font-weight:700; color:var(--text-bright); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chapter-sub  { font-size:10px; color:var(--text-mid); margin-top:1px; }
+  .chapter-status { font-size:12px; flex-shrink:0; }
+
+  /* ── CANVAS / IFRAME WRAP ── */
+  .canvas-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+    background: #000;
+    overflow: hidden;
+  }
+
+  #session-frame {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: none;
+    background: #000;
+    z-index: 10;
+    display: none;
+    overflow: hidden;
+  }
+
+  #frame-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 8, 20, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  #frame-loading.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .loading-spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(59,130,246,0.2);
+    border-top-color: var(--accent-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'Fredoka', cursive;
+    font-size: 14px;
+    color: var(--text-mid);
+    letter-spacing: 0.5px;
+  }
+
+  #main-canvas { width:100%; height:100%; display:block; }
+
+  /* ── DRAG LAYER — absolute inside canvas-wrap ── */
+  #drag-layer {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:20;
+  }
+
+  /* ── EGG ── */
+  .egg {
+    position: absolute;
+    width: 32px; height: 32px;
+    cursor: grab;
+    pointer-events: all;
+    user-select: none;
+    z-index: 30;
+    transform: translate(-50%,-50%);
+    touch-action: none;
+  }
+  .egg img { width:100%; height:100%; pointer-events:none; display:block; }
+  .egg.dragging { cursor:grabbing; z-index:100; }
+  .egg.hidden { opacity:0; pointer-events:none; }
+  /* locked state — before audio reaches sec 17 */
+  .egg.locked-drag { cursor: not-allowed; pointer-events: none; opacity: 0.5; }
+
+  /* Snap ghost — flies from drop-point to slot centre */
+  #snap-ghost {
+    position: fixed;
+    width: 32px; height: 32px;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%,-50%);
+    display: none;
+    will-change: left, top;
+  }
+  #snap-ghost img { width:100%; height:100%; display:block; }
+  #snap-ghost.flying {
+    transition: left 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                top  0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Return animation — egg slides back to its pan position */
+  .egg.returning {
+    transition: left 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                top  0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+    cursor: default;
+  }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    position:absolute;
+    border:2px dashed transparent;
+    border-radius:6px;
+    pointer-events:all;
+    transition:background 0.15s, border-color 0.15s;
+    z-index:25;
+  }
+  .drop-zone.active {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+  .drop-zone.filled { pointer-events:none; }
+
+  /* Ghost element while dragging */
+  #drag-ghost {
+    position: fixed;
+    width: 32px; height: 32px;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%,-50%);
+    filter: brightness(1.3) drop-shadow(0 0 10px rgba(255,255,200,0.9));
+    display: none;
+  }
+  #drag-ghost img { width:100%; height:100%; display:block; }
+
+  #feedback {
+    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+    font-family:'Fredoka',cursive; font-size:20px; font-weight:600;
+    min-height:28px; pointer-events:none; z-index:50;
+    text-shadow:0 2px 8px rgba(0,0,0,0.7); white-space:nowrap;
+  }
+  .correct { color:#4ade80; }
+  .wrong   { color:#f87171; }
+
+  /* ── BOTTOM BAR ── */
+  .bottom-bar {
+    position: relative; z-index: 2;
+    background: linear-gradient(90deg, rgba(10,20,60,0.97) 0%, rgba(18,30,72,0.97) 50%, rgba(10,20,60,0.97) 100%);
+    border-top: 1px solid rgba(59,130,246,0.2);
+    display: flex; align-items: center;
+    padding: 10px 16px; gap: 8px; min-height: 66px;
+  }
+  .bottom-bar::before {
+    content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent);
+  }
+
+  .pill {
+    border-radius: 50px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 14px; height: 42px; min-width: 52px;
+    font-size: 0; position: relative; border: none; cursor: pointer;
+    transition: all 0.15s cubic-bezier(.34,1.56,.64,1);
+  }
+  .pill:hover  { transform: scale(1.08) translateY(-2px); }
+  .pill:active { transform: scale(0.95) translateY(1px); }
+
+  .pill-exit {
+    background: linear-gradient(160deg, #7f1d1d 0%, #991b1b 40%, #7f1d1d 100%);
+    box-shadow: 0 1px 0 rgba(255,120,120,0.3) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 4px 14px rgba(153,27,27,0.5);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+  .pill-exit::after {
+    content:''; position:absolute; width:22px; height:22px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fca5a5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpolyline points='16 17 21 12 16 7'/%3E%3Cline x1='21' y1='12' x2='9' y2='12'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+  }
+
+  .pill-back {
+    background: linear-gradient(160deg, #7f1d1d 0%, #991b1b 40%, #7f1d1d 100%);
+    box-shadow: 0 1px 0 rgba(255,120,120,0.3) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 4px 14px rgba(153,27,27,0.5);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+  .pill-back::after {
+    content:''; position:absolute; width:24px; height:22px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fca5a5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='11 17 6 12 11 7'/%3E%3Cpolyline points='18 17 13 12 18 7'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+  }
+
+  .pill-prev {
+    background: linear-gradient(160deg, #7c2d12 0%, #c2410c 40%, #7c2d12 100%);
+    box-shadow: 0 1px 0 rgba(255,160,80,0.3) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 4px 14px rgba(194,65,12,0.5);
+    border: 1px solid rgba(249,115,22,0.3);
+  }
+  .pill-prev::after {
+    content:''; position:absolute; width:22px; height:22px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fdba74' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+  }
+
+  .pill-listen {
+    background: linear-gradient(160deg, #1e3a8a 0%, #2563eb 40%, #1e3a8a 100%);
+    box-shadow: 0 1px 0 rgba(147,197,253,0.3) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 4px 14px rgba(37,99,235,0.6), 0 0 20px rgba(37,99,235,0.25);
+    border: 1px solid rgba(96,165,250,0.35);
+    min-width: 64px; height: 46px;
+  }
+  .pill-listen::after {
+    content:''; position:absolute; width:26px; height:26px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2393c5fd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 18v-6a9 9 0 0 1 18 0v6'/%3E%3Cpath d='M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 0 4px rgba(147,197,253,0.6));
+  }
+
+  .pill-playpause {
+    background: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 40%, #1e3a8a 100%);
+    box-shadow: 0 1px 0 rgba(147,197,253,0.3) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 4px 14px rgba(29,78,216,0.55);
+    border: 1px solid rgba(96,165,250,0.3);
+    min-width: 68px; height: 46px;
+  }
+  .pill-playpause[data-state="playing"]::after {
+    content:''; position:absolute; width:24px; height:24px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2393c5fd'%3E%3Crect x='6' y='4' width='4' height='16' rx='1'/%3E%3Crect x='14' y='4' width='4' height='16' rx='1'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 3px rgba(147,197,253,0.5));
+  }
+  .pill-playpause[data-state="paused"]::after {
+    content:''; position:absolute; width:24px; height:24px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2393c5fd'%3E%3Cpolygon points='5 3 19 12 5 21 5 3'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 3px rgba(147,197,253,0.5));
+  }
+
+  .bar-spacer { flex:1; }
+
+  /* ── NEXT BUTTON ── */
+  #btn-next-wrap {
+    display: flex; align-items: center; justify-content: center;
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    position: relative; flex-shrink: 0;
+    cursor: default;
+    background: linear-gradient(145deg, #166534 0%, #15803d 50%, #14532d 100%);
+    box-shadow: 0 1px 0 rgba(134,239,172,0.35) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 6px 20px rgba(22,163,74,0.55), 0 0 30px rgba(22,163,74,0.2);
+    border: 1px solid rgba(74,222,128,0.35);
+    transition: all 0.18s;
+  }
+  #btn-next-wrap.enabled { cursor: pointer; animation: pulse-green 2s ease-in-out infinite; }
+  #btn-next-wrap.enabled:hover { transform: scale(1.12); }
+  @keyframes pulse-green {
+    0%,100% { box-shadow: 0 1px 0 rgba(134,239,172,0.35) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 6px 20px rgba(22,163,74,0.55), 0 0 30px rgba(22,163,74,0.2); }
+    50%      { box-shadow: 0 1px 0 rgba(134,239,172,0.35) inset, 0 -3px 0 rgba(0,0,0,0.4) inset, 0 6px 24px rgba(22,163,74,0.8), 0 0 50px rgba(22,163,74,0.45); }
+  }
+  #btn-next-arrow {
+    width: 26px; height: 26px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2386efac'%3E%3Cpolygon points='5 3 19 12 5 21 5 3'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 1px 4px rgba(134,239,172,0.6));
+    pointer-events: none;
+  }
+  #btn-next-wrap.disabled-next #btn-next-arrow { opacity:0.35; filter:none; }
+
+  /* ── CONFIRM EXIT MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(4,8,20,0.82);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal-box {
+    background: linear-gradient(160deg, #0f1e50 0%, #080e24 100%);
+    border: 1px solid rgba(59,130,246,0.35);
+    border-radius: 20px;
+    padding: 28px 32px 24px;
+    width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(59,130,246,0.12);
+    text-align: center;
+    transform: scale(0.88);
+    transition: transform 0.25s cubic-bezier(.34,1.3,.64,1);
+  }
+  .modal-overlay.open .modal-box { transform: scale(1); }
+  .modal-icon  { font-size:38px; margin-bottom:12px; }
+  .modal-title { font-family:'Fredoka',cursive; font-size:20px; font-weight:600; color:var(--text-bright); margin-bottom:8px; }
+  .modal-desc  { font-size:13px; color:var(--text-mid); line-height:1.5; margin-bottom:20px; }
+  .modal-actions { display:flex; gap:10px; }
+  .modal-btn {
+    flex:1; height:40px; border-radius:50px; border:none; cursor:pointer;
+    font-family:'Fredoka',cursive; font-size:14px; font-weight:600;
+    transition: all 0.15s;
+  }
+  .modal-btn:hover { transform: translateY(-1px); }
+  .modal-btn-cancel  { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); color:var(--text-mid); }
+  .modal-btn-confirm { background:linear-gradient(160deg,#991b1b,#dc2626); color:#fff; box-shadow:0 4px 14px rgba(220,38,38,0.45); }
+
+  #session-label {
+    font-family: 'Fredoka', cursive;
+    font-size: 12px;
+    color: var(--text-mid);
+    letter-spacing: 0.5px;
+    padding: 0 6px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Ghost element — moves with cursor/finger during drag -->
+<div id="drag-ghost"><img src="images/1_up.png" alt=""></div>
+<!-- Snap ghost — animates from release point into slot -->
+<div id="snap-ghost"><img src="images/1_up.png" alt=""></div>
+
+<!-- EXIT CONFIRM MODAL -->
+<div class="modal-overlay" id="exit-modal">
+  <div class="modal-box">
+    <div class="modal-icon">🚪</div>
+    <div class="modal-title">Thoát bài học?</div>
+    <div class="modal-desc">Tiến trình chưa được lưu. Bạn có chắc muốn thoát?</div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" id="modal-cancel">Tiếp tục học</button>
+      <button class="modal-btn modal-btn-confirm" id="modal-confirm">Thoát</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCALE ROOT — all UI lives inside here -->
+<div id="scale-root">
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <span class="top-bar-label">Numbers to 100</span>
+    <span class="top-bar-center" id="top-bar-center-label">Lesson</span>
+    <div class="top-bar-right">
+      <span class="screen-badge" id="session-label">Screen 1</span>
+      <div class="help-btn">?</div>
+    </div>
+  </div>
+
+  <!-- MAIN BODY -->
+  <div class="main-body">
+
+    <!-- CANVAS AREA -->
+    <div class="canvas-wrap">
+      <canvas id="main-canvas" width="590" height="410"></canvas>
+      <div id="drag-layer"></div>
+      <div id="feedback"></div>
+
+      <iframe id="session-frame"
+        src=""
+        allowtransparency="true"
+        allow="autoplay"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+      </iframe>
+
+      <div id="frame-loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Đang tải bài học…</div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <div class="sidebar-right">
+      <button class="side-btn side-btn-flag"   id="btn-flag"    title="Menu"></button>
+      <button class="side-btn side-btn-trophy" id="btn-trophy"  title="Rewards"></button>
+      <div class="sidebar-divider"></div>
+
+      <button class="side-chapter-btn" id="btn-chapter" title="Chọn chương">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="#1c0a00" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6"  x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6"  x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+      </button>
+
+      <!-- Chapter slide-out panel -->
+      <div class="chapter-panel" id="chapter-panel">
+        <div class="chapter-panel-header">
+          <span class="chapter-panel-title">Chọn chương</span>
+          <button class="chapter-panel-close" id="chapter-close">✕</button>
+        </div>
+        <div class="chapter-list" id="chapter-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="bottom-bar">
+    <button class="pill pill-exit"      id="btn-exit"      title="Thoát bài học"></button>
+    <button class="pill pill-back"      id="btn-back"      title="Bài trước"></button>
+    <button class="pill pill-prev"      id="btn-prev"      title="Chương trước"></button>
+
+    <div class="bar-spacer"></div>
+    <div class="bar-spacer"></div>
+
+    <button class="pill pill-listen"    id="btn-listen"    title="Nghe lại từ đầu"></button>
+    <button class="pill pill-playpause" id="btn-playpause" data-state="paused" title="Phát / Tạm dừng"></button>
+
+    <div class="bar-spacer"></div>
+
+    <div id="btn-next-wrap" class="disabled-next" title="Bài tiếp theo">
+      <div id="btn-next-arrow"></div>
+    </div>
+  </div>
+</div>
+</div><!-- /scale-root -->
+
+<script>
+// ═══════════════════════════════════════════════════
+// RESPONSIVE SCALE — keeps 800×625 design centered
+// and scales uniformly to fit any viewport
+// ═══════════════════════════════════════════════════
+const DESIGN_W = 800, DESIGN_H = 625;
+
+function applyScale() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const scale = Math.min(vw / DESIGN_W, vh / DESIGN_H, 1); // never upscale beyond 1×
+  const root = document.getElementById('scale-root');
+  root.style.transform = `scale(${scale})`;
+  // Centre it manually (transform-origin: center is handled by flexbox on body)
+}
+
+applyScale();
+window.addEventListener('resize', applyScale);
+// Also fire on orientation change for mobile
+window.addEventListener('orientationchange', () => setTimeout(applyScale, 100));
+
+// ═══════════════════════════════════════════════
+// CHAPTER DATA
+// ═══════════════════════════════════════════════
+const CHAPTERS = [
+  { id:1,  name:"Numbers 1–10",   sub:"Session 1",  url:"session1/index.html",  status:"current" },
+  { id:2,  name:"Numbers 11–20",  sub:"Session 2",  url:"session2/index.html",  status:"done"    },
+  { id:3,  name:"Numbers 21–30",  sub:"Session 3",  url:"session3/index.html",  status:"locked"  },
+  { id:4,  name:"Numbers 31–40",  sub:"Session 4",  url:"session4/index.html",  status:"locked"  },
+  { id:5,  name:"Numbers 41–50",  sub:"Session 5",  url:"session5/index.html",  status:"locked"  },
+  { id:6,  name:"Numbers 51–60",  sub:"Session 6",  url:"session6/index.html",  status:"locked"  },
+  { id:7,  name:"Numbers 61–70",  sub:"Session 7",  url:"session7/index.html",  status:"locked"  },
+  { id:8,  name:"Numbers 71–80",  sub:"Session 8",  url:"session8/index.html",  status:"locked"  },
+  { id:9,  name:"Numbers 81–90",  sub:"Session 9",  url:"session9/index.html",  status:"locked"  },
+  { id:10, name:"Numbers 91–100", sub:"Session 10", url:"session10/index.html", status:"locked"  },
+];
+const PREV_SESSION = { id:0, name:"Intro", sub:"Session 0", url:"session0/index.html" };
+const STATUS_ICON  = { current:"▶", done:"✓", locked:"🔒" };
+
+// ═══════════════════════════════════════════════
+// GAME CONSTANTS
+// ═══════════════════════════════════════════════
+const AUDIO_PATH      = "session1/sounds/-1.mp3";
+const FRAMES_PATH     = "session1/frames/";
+const SOUNDS_PATH     = "session1/sounds/";
+const TOTAL_FRAMES    = 415;
+const FPS             = 24;
+const PAN_START_FRAME = 216;
+const JUMP_TO_FRAME   = 415;
+
+let currentSessionIndex = 0;
+let isShowingFrame      = false;
+
+const sessionFrame = document.getElementById("session-frame");
+const frameLoading = document.getElementById("frame-loading");
+const sessionLabel = document.getElementById("session-label");
+
+function loadSessionInFrame(url, name, idx) {
+  player.pause();
+  frameLoading.classList.add("show");
+  sessionFrame.style.display = "block";
+  document.getElementById("main-canvas").style.display = "none";
+  document.getElementById("drag-layer").style.display  = "none";
+  document.getElementById("feedback").style.display    = "none";
+  isShowingFrame = true;
+  currentSessionIndex = idx;
+  sessionLabel.textContent = name;
+  updateChapterListActive(idx);
+  const wrap = document.getElementById("btn-next-wrap");
+  wrap.classList.remove("enabled");
+  wrap.classList.add("disabled-next");
+  wrap.style.cursor = "default";
+  sessionFrame.src = "";
+  requestAnimationFrame(() => { sessionFrame.src = url; });
+}
+
+function showShellCanvas() {
+  sessionFrame.style.display = "none";
+  sessionFrame.src = "";
+  document.getElementById("main-canvas").style.display = "block";
+  document.getElementById("drag-layer").style.display  = "block";
+  document.getElementById("feedback").style.display    = "block";
+  frameLoading.classList.remove("show");
+  isShowingFrame = false;
+  currentSessionIndex = 0;
+  sessionLabel.textContent = "Session 1";
+  updateChapterListActive(0);
+}
+
+sessionFrame.addEventListener("load", () => frameLoading.classList.remove("show"));
+
+function updateChapterListActive(activeIdx) {
+  document.querySelectorAll(".chapter-item").forEach((item, i) => {
+    item.classList.toggle("active", i === activeIdx);
+    const numEl = item.querySelector(".chapter-num");
+    if (numEl) {
+      numEl.style.background   = (i === activeIdx) ? "rgba(34,211,238,0.2)" : "";
+      numEl.style.borderColor  = (i === activeIdx) ? "rgba(34,211,238,0.5)" : "";
+      numEl.style.boxShadow    = (i === activeIdx) ? "0 0 8px rgba(34,211,238,0.3)" : "";
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+// DRAG UNLOCK — eggs can only be dragged after
+// lessonAudio passes SEGMENT_A_END (second 17)
+// ═══════════════════════════════════════════════
+let dragUnlocked = false;
+
+function setDragLocked(locked) {
+  dragUnlocked = !locked;
+  document.querySelectorAll(".egg:not(.hidden)").forEach(el => {
+    el.classList.toggle("locked-drag", locked);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// LESSON AUDIO
+// ═══════════════════════════════════════════════
+const LESSON_AUDIO_PATH = "session1/sounds/lesson_intro.mp3";
+const SEGMENT_A_END     = 17;
+const SEGMENT_B_START   = 29;
+
+const lessonAudio = new Audio(LESSON_AUDIO_PATH);
+lessonAudio.preload = "auto";
+lessonAudio._waiting = false;
+
+lessonAudio.addEventListener("timeupdate", () => {
+  if (!lessonAudio._waiting && lessonAudio.currentTime >= SEGMENT_A_END) {
+    lessonAudio.pause();
+    lessonAudio._waiting = true;
+    // Unlock egg dragging now that the intro narration is done
+    setDragLocked(false);
+  }
+});
+
+const panImg = new Image();
+panImg.src = "images/48.png";
+
+// ═══════════════════════════════════════════════
+// QUESTION DATA
+// ═══════════════════════════════════════════════
+const EGG_POSITIONS = [
+  {x:35,y:435},{x:55,y:420},{x:86,y:409},{x:85,y:441},{x:97,y:473},
+  {x:114,y:419},{x:137,y:446},{x:142,y:414},{x:168,y:432},{x:161,y:474},
+];
+const ZONE_POSITIONS = [
+  {x:267,y:106},{x:321,y:107},{x:268,y:150},{x:317,y:155},
+  {x:268,y:203},{x:317,y:202},{x:269,y:249},{x:318,y:250},
+  {x:269,y:295},{x:320,y:296},
+];
+const ZONE_SIZE = 34;
+
+function makeQuestion(fid, count, vals) {
+  const eggs = EGG_POSITIONS.map((p,i) => ({
+    id:`egg-${fid}-${i+1}`, x:p.x, y:p.y,
+    value: vals[i] !== undefined ? vals[i] : i+1
+  }));
+  const dropZones = ZONE_POSITIONS.map((p,i) => ({
+    id:`dz-${fid}-${i+1}`,
+    x: p.x - ZONE_SIZE/2, y: p.y - ZONE_SIZE/2,
+    w: ZONE_SIZE, h: ZONE_SIZE,
+    acceptValue: null
+  }));
+  return { correctCount:count, eggs, dropZones };
+}
+const QUESTIONS = { 233: makeQuestion(233, 10, [1,2,3,4,5,6,7,8,9,10]) };
+
+let dropZoneCounter = 0;
+
+const audio = new Audio(AUDIO_PATH);
+audio.preload = "auto";
+
+function playEggSounds(idx) {
+  const f  = 79 + idx * 2, s = f + 1;
+  const a1 = new Audio(SOUNDS_PATH + f + ".mp3");
+  const a2 = new Audio(SOUNDS_PATH + s + ".mp3");
+  a1.play().catch(() => {});
+  a1.addEventListener("ended", () => a2.play().catch(() => {}));
+}
+
+const canvas     = document.getElementById("main-canvas");
+const ctx        = canvas.getContext("2d");
+const dragLayer  = document.getElementById("drag-layer");
+const feedbackEl = document.getElementById("feedback");
+
+// ═══════════════════════════════════════════════
+// DRAG & DROP — ghost-based snap, return-to-pan
+// ═══════════════════════════════════════════════
+
+const ghost     = document.getElementById("drag-ghost");
+const snapGhost = document.getElementById("snap-ghost");
+
+// Store original pan positions per egg id
+const eggOrigin = {};   // { [id]: { ox, oy } }  — layer px (centre)
+
+// Drag state
+const DS = { el: null };
+
+function getScale() {
+  return parseFloat(
+    document.getElementById('scale-root').style.transform.replace(/[^0-9.]/g,'')
+  ) || 1;
+}
+
+function makeDraggable(el) {
+  // Record original position (centre in layer px — see .egg transform:-50%,-50%)
+  eggOrigin[el.id] = {
+    ox: parseFloat(el.style.left),
+    oy: parseFloat(el.style.top)
+  };
+
+  el.addEventListener("mousedown", e => {
+    if (!dragUnlocked) return;
+    e.preventDefault();
+    startDrag(e.currentTarget, e.clientX, e.clientY);
+    document.addEventListener("mousemove", onMM);
+    document.addEventListener("mouseup",   onMU);
+  });
+
+  el.addEventListener("touchstart", e => {
+    if (!dragUnlocked) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    startDrag(e.currentTarget, t.clientX, t.clientY);
+    document.addEventListener("touchmove", onTM, { passive: false });
+    document.addEventListener("touchend",  onTE);
+  }, { passive: false });
+}
+
+function startDrag(el, cx, cy) {
+  // If egg is mid-return animation, cancel it and snap to origin immediately
+  if (el.classList.contains("returning")) {
+    el.classList.remove("returning");
+    const origin = eggOrigin[el.id];
+    if (origin) {
+      el.style.left = origin.ox + "px";
+      el.style.top  = origin.oy + "px";
+    }
+    el.getBoundingClientRect(); // flush
+  }
+  DS.el = el;
+  el.classList.add("dragging", "hidden");
+  ghost.style.display = "block";
+  moveGhost(cx, cy);
+}
+
+function moveGhost(cx, cy) {
+  ghost.style.left = cx + "px";
+  ghost.style.top  = cy + "px";
+}
+
+function onMM(e) { moveGhost(e.clientX, e.clientY); highlightZones(e.clientX, e.clientY); }
+function onTM(e) { e.preventDefault(); const t = e.touches[0]; moveGhost(t.clientX, t.clientY); highlightZones(t.clientX, t.clientY); }
+function onMU(e) { endDrag(e.clientX, e.clientY); document.removeEventListener("mousemove", onMM); document.removeEventListener("mouseup", onMU); }
+function onTE(e) { const t = e.changedTouches[0]; endDrag(t.clientX, t.clientY); document.removeEventListener("touchmove", onTM); document.removeEventListener("touchend", onTE); }
+
+function endDrag(releaseVX, releaseVY) {
+  const el = DS.el;
+  if (!el) return;
+  DS.el = null;
+
+  ghost.style.display = "none";
+  clearHighlight();
+
+  const scale = getScale();
+  const HIT_RADIUS = 70 * scale;
+
+  // Find nearest empty drop zone within hit radius
+  const dzEls = Array.from(document.querySelectorAll(".drop-zone:not(.filled)"));
+  let bestDz = null, bestDist = Infinity;
+
+  dzEls.forEach(dz => {
+    const r   = dz.getBoundingClientRect();
+    const dcx = r.left + r.width  / 2;
+    const dcy = r.top  + r.height / 2;
+    const d   = Math.hypot(releaseVX - dcx, releaseVY - dcy);
+    if (d < HIT_RADIUS && d < bestDist) { bestDist = d; bestDz = dz; }
+  });
+
+  if (bestDz) {
+    // ── SNAP: animate ghost from release-viewport-pos → slot-viewport-pos ──
+    bestDz.classList.add("filled");
+
+    const dzRect = bestDz.getBoundingClientRect();
+    const slotVX = dzRect.left + dzRect.width  / 2;
+    const slotVY = dzRect.top  + dzRect.height / 2;
+
+    // Place snap ghost at the release position (no transition yet)
+    snapGhost.classList.remove("flying");
+    snapGhost.style.left    = releaseVX + "px";
+    snapGhost.style.top     = releaseVY + "px";
+    snapGhost.style.display = "block";
+
+    // Force a reflow so the starting position is painted before transition kicks in
+    snapGhost.getBoundingClientRect();
+
+    // Now add transition and move to slot centre
+    snapGhost.classList.add("flying");
+    snapGhost.style.left = slotVX + "px";
+    snapGhost.style.top  = slotVY + "px";
+
+    snapGhost.addEventListener("transitionend", () => {
+      snapGhost.classList.remove("flying");
+      snapGhost.style.display = "none";
+
+      // Lock zone, hide egg, place static image
+      el.classList.add("hidden");
+      el.classList.remove("dragging");
+      bestDz.innerHTML = `<img src="images/1_up.png" style="width:23px;height:23px;display:block;margin:${(ZONE_SIZE-23)/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
+
+      dropZoneCounter++;
+      playEggSounds(dropZoneCounter);
+      player.onCorrectDrop(bestDz.dataset.frame);
+    }, { once: true });
+
+  } else {
+    // ── RETURN: animate egg from release point back to pan origin ──
+    el.classList.remove("dragging", "hidden");
+
+    const origin = eggOrigin[el.id];
+    if (origin) {
+      // Convert release viewport coords → layer coords so the egg
+      // starts visually where the ghost was dropped
+      const scale    = getScale();
+      const wrapRect = dragLayer.getBoundingClientRect();
+      const fromLX   = (releaseVX - wrapRect.left) / scale;
+      const fromLY   = (releaseVY - wrapRect.top)  / scale;
+
+      // 1. Kill any in-progress transition, teleport to release point
+      el.classList.remove("returning");
+      el.style.left = fromLX + "px";
+      el.style.top  = fromLY + "px";
+
+      // 2. Force a paint at the new starting position
+      el.getBoundingClientRect();
+
+      // 3. Animate back to origin
+      el.classList.add("returning");
+      el.style.left = origin.ox + "px";
+      el.style.top  = origin.oy + "px";
+
+      el.addEventListener("transitionend", () => {
+        el.classList.remove("returning");
+        el.style.left = origin.ox + "px";
+        el.style.top  = origin.oy + "px";
+      }, { once: true });
+    }
+  }
+}
+
+function highlightZones(cx, cy) {
+  const scale = getScale();
+  const HIT_RADIUS = 70 * scale;
+  document.querySelectorAll(".drop-zone:not(.filled)").forEach(dz => {
+    const r   = dz.getBoundingClientRect();
+    const dcx = r.left + r.width  / 2;
+    const dcy = r.top  + r.height / 2;
+    dz.classList.toggle("active", Math.hypot(cx - dcx, cy - dcy) < HIT_RADIUS);
+  });
+}
+
+function clearHighlight() {
+  document.querySelectorAll(".drop-zone").forEach(dz => dz.classList.remove("active"));
+}
+
+// ═══════════════════════════════════════════════
+// BUILD / CLEAR QUESTION
+// ═══════════════════════════════════════════════
+function buildQuestion(fn) {
+  dragLayer.innerHTML = "";
+  dragLayer.style.pointerEvents = "all";
+  const q = QUESTIONS[fn];
+  if (!q) return;
+
+  q.dropZones.forEach(dz => {
+    const el = document.createElement("div");
+    el.className       = "drop-zone";
+    el.id              = dz.id;
+    el.dataset.frame   = fn;
+    el.dataset.accept  = dz.acceptValue;
+    el.style.left      = dz.x + "px";
+    el.style.top       = dz.y + "px";
+    el.style.width     = dz.w + "px";
+    el.style.height    = dz.h + "px";
+    dragLayer.appendChild(el);
+  });
+
+  q.eggs.forEach(egg => {
+    const el = document.createElement("div");
+    el.className       = "egg";
+    el.id              = egg.id;
+    el.dataset.value   = egg.value;
+    el.style.left      = egg.x + "px";
+    el.style.top       = egg.y + "px";
+    el.innerHTML       = `<img src="images/1_up.png" alt="egg" style="width:23px;height:23px;display:block;">`;
+    // Start locked — will unlock when audio passes second 17
+    if (!dragUnlocked) el.classList.add("locked-drag");
+    dragLayer.appendChild(el);
+    makeDraggable(el);
+  });
+}
+
+function clearQuestion() {
+  dragLayer.innerHTML = "";
+  dragLayer.style.pointerEvents = "none";
+}
+
+// ═══════════════════════════════════════════════
+// PLAYER
+// ═══════════════════════════════════════════════
+const player = {
+  frames: [], currentFrame: 0,
+  isPlaying: false, isWaiting: false, waitingAt: null,
+  interval: null, score: 0, correctInQuestion: 0,
+
+  async loadFrames() {
+    const all = [];
+    for (let i = 1; i <= TOTAL_FRAMES; i++) {
+      const img = new Image();
+      all.push(new Promise(res => {
+        img.onload  = () => res({ i, img });
+        img.onerror = () => res({ i, img: null });
+        img.src = FRAMES_PATH + i + ".png";
+      }));
+    }
+    (await Promise.all(all)).forEach(({ i, img }) => { if (img) this.frames[i] = img; });
+    this.drawFrame(1);
+  },
+
+  drawFrame(n) {
+    const img = this.frames[n];
+    if (!img) return;
+    ctx.clearRect(0, 0, 590, 410);
+    ctx.drawImage(img, 0, 0, 590, 410);
+    if (n >= PAN_START_FRAME && panImg.complete && panImg.naturalWidth > 0)
+      ctx.drawImage(panImg, 88-95, 370-60, 190, 120);
+    this.currentFrame = n;
+  },
+
+  play(from) {
+    if (this.isPlaying) return;
+    this.isPlaying = true; this.isWaiting = false; clearQuestion();
+    const sf = from !== undefined ? from : this.currentFrame + 1;
+    audio.currentTime = (sf - 1) / FPS;
+    audio.play().catch(() => {});
+    if (from !== undefined) this.currentFrame = from - 1;
+    if (!from || from === 1) {
+      lessonAudio.currentTime = 0;
+      lessonAudio._waiting    = false;
+      lessonAudio.play().catch(() => {});
+    } else if (!lessonAudio._waiting && lessonAudio.paused && !lessonAudio.ended) {
+      lessonAudio.play().catch(() => {});
+    }
+    this.interval = setInterval(() => {
+      if (this.isWaiting) return;
+      const nxt = this.currentFrame + 1;
+      if (nxt > TOTAL_FRAMES) { this.stop(); return; }
+      this.drawFrame(nxt);
+      if (QUESTIONS[nxt]) this.startQuestion(nxt);
+    }, 1000 / FPS);
+    syncPlayPauseBtn();
+  },
+
+  stop()  { this.isPlaying = false; clearInterval(this.interval); this.interval = null; audio.pause(); lessonAudio.pause(); syncPlayPauseBtn(); },
+  pause() { this.stop(); },
+
+  restart() {
+    this.stop(); this.score = 0; dropZoneCounter = 0;
+    this.isWaiting = false; this.waitingAt = null;
+    dragUnlocked = false;  // re-lock until audio hits sec 17 again
+    clearQuestion(); feedbackEl.textContent = "";
+    this.currentFrame = 0; audio.currentTime = 0;
+    lessonAudio.pause(); lessonAudio.currentTime = 0; lessonAudio._waiting = false;
+    const wrap = document.getElementById("btn-next-wrap");
+    wrap.classList.remove("enabled"); wrap.classList.add("disabled-next"); wrap.style.cursor = "default";
+    this.drawFrame(1);
+    setTimeout(() => this.play(), 200);
+  },
+
+  startQuestion(fn) {
+    this.isWaiting = true; this.waitingAt = fn; this.correctInQuestion = 0;
+    audio.pause(); buildQuestion(fn); syncPlayPauseBtn();
+  },
+
+  onCorrectDrop(fn) {
+    fn = parseInt(fn);
+    const q = QUESTIONS[fn];
+    this.correctInQuestion++;
+    setTimeout(() => { feedbackEl.textContent = ""; }, 500);
+    if (this.correctInQuestion >= q.correctCount) {
+      this.score++;
+      if (lessonAudio._waiting) {
+        lessonAudio._waiting = false;
+        lessonAudio.currentTime = SEGMENT_B_START;
+        lessonAudio.play().catch(() => {});
+      }
+      setTimeout(() => {
+        feedbackEl.textContent = "";
+        clearQuestion();
+        this.isWaiting = false; this.waitingAt = null;
+        this.stop(); this.play(JUMP_TO_FRAME);
+      }, 600);
+      const animDuration = ((TOTAL_FRAMES - JUMP_TO_FRAME) / FPS) * 1000;
+      setTimeout(() => {
+        const wrap = document.getElementById("btn-next-wrap");
+        wrap.classList.remove("disabled-next");
+        wrap.classList.add("enabled");
+        wrap.style.cursor = "pointer";
+      }, 600 + animDuration + 300);
+    }
+  },
+
+  onWrongDrop() {
+    feedbackEl.textContent = "✗ Sai! Thử lại nhé";
+    feedbackEl.className   = "wrong";
+    setTimeout(() => { feedbackEl.textContent = ""; }, 800);
+  },
+};
+
+// ═══════════════════════════════════════════════
+// PLAY/PAUSE SYNC
+// ═══════════════════════════════════════════════
+function syncPlayPauseBtn() {
+  const btn = document.getElementById("btn-playpause");
+  btn.dataset.state = player.isPlaying ? "playing" : "paused";
+  btn.title = player.isPlaying ? "Tạm dừng" : "Phát";
+}
+
+// ═══════════════════════════════════════════════
+// CHAPTER PANEL
+// ═══════════════════════════════════════════════
+function buildChapterList() {
+  const list = document.getElementById("chapter-list");
+  list.innerHTML = "";
+  CHAPTERS.forEach((ch, i) => {
+    const item = document.createElement("div");
+    item.className = "chapter-item" + (i === currentSessionIndex ? " active" : "") + (ch.status === "locked" ? " locked" : "");
+    item.innerHTML = `
+      <div class="chapter-num">${ch.id}</div>
+      <div class="chapter-info">
+        <div class="chapter-name">${ch.name}</div>
+        <div class="chapter-sub">${ch.sub}</div>
+      </div>
+      <div class="chapter-status">${STATUS_ICON[ch.status] || ""}</div>`;
+    if (ch.status !== "locked") {
+      item.addEventListener("click", () => {
+        closeChapterPanel();
+        if (i === 0 && !isShowingFrame) { /* already here */ }
+        else loadSessionInFrame(ch.url, ch.sub, i);
+      });
+    }
+    list.appendChild(item);
+  });
+}
+
+const openChapterPanel   = () => document.getElementById("chapter-panel").classList.add("open");
+const closeChapterPanel  = () => document.getElementById("chapter-panel").classList.remove("open");
+const toggleChapterPanel = () => document.getElementById("chapter-panel").classList.toggle("open");
+
+// ═══════════════════════════════════════════════
+// EXIT MODAL
+// ═══════════════════════════════════════════════
+function openExitModal()  { player.pause(); document.getElementById("exit-modal").classList.add("open"); }
+function closeExitModal() { document.getElementById("exit-modal").classList.remove("open"); }
+
+document.getElementById("modal-cancel").onclick  = () => closeExitModal();
+document.getElementById("modal-confirm").onclick = () => { window.location.href = "/"; };
+document.getElementById("exit-modal").addEventListener("click", e => { if (e.target === e.currentTarget) closeExitModal(); });
+
+// ═══════════════════════════════════════════════
+// BUTTON WIRING
+// ═══════════════════════════════════════════════
+document.getElementById("btn-exit").onclick = () => openExitModal();
+
+document.getElementById("btn-back").onclick = () => {
+  const prevIdx = currentSessionIndex - 1;
+  if (prevIdx < -1) return;
+  if (prevIdx === 0) { showShellCanvas(); return; }
+  if (prevIdx === -1) { loadSessionInFrame(PREV_SESSION.url, PREV_SESSION.sub, -1); return; }
+  const ch = CHAPTERS[prevIdx];
+  if (ch && ch.status !== "locked") loadSessionInFrame(ch.url, ch.sub, prevIdx);
+};
+
+document.getElementById("btn-prev").onclick = () => {
+  if (!isShowingFrame) { player.stop(); player.drawFrame(Math.max(player.currentFrame - 1, 1)); }
+};
+
+document.getElementById("btn-listen").onclick = () => {
+  if (!isShowingFrame) {
+    player.restart();
+  } else {
+    const src = sessionFrame.src;
+    frameLoading.classList.add("show");
+    sessionFrame.src = "";
+    setTimeout(() => { sessionFrame.src = src; }, 100);
+  }
+};
+
+document.getElementById("btn-playpause").onclick = () => {
+  if (!isShowingFrame) { player.isPlaying ? player.pause() : player.play(); }
+};
+
+document.getElementById("btn-chapter").onclick  = () => toggleChapterPanel();
+document.getElementById("chapter-close").onclick = () => closeChapterPanel();
+
+document.addEventListener("click", e => {
+  const panel = document.getElementById("chapter-panel");
+  const btn   = document.getElementById("btn-chapter");
+  if (panel.classList.contains("open") && !panel.contains(e.target) && !btn.contains(e.target))
+    closeChapterPanel();
+});
+
+document.getElementById("btn-next-wrap").addEventListener("click", () => {
+  const wrap = document.getElementById("btn-next-wrap");
+  if (!wrap.classList.contains("enabled")) return;
+  const nextIdx = currentSessionIndex + 1;
+  if (nextIdx < CHAPTERS.length) {
+    const ch = CHAPTERS[nextIdx];
+    if (ch && ch.status !== "locked") loadSessionInFrame(ch.url, ch.sub, nextIdx);
+  }
+});
+
+window.addEventListener("message", e => {
+  if (e.data?.action === "nextLesson" || e.data === "nextLesson") {
+    const nextIdx = currentSessionIndex + 1;
+    if (nextIdx < CHAPTERS.length) {
+      const ch = CHAPTERS[nextIdx];
+      if (ch && ch.status !== "locked") loadSessionInFrame(ch.url, ch.sub, nextIdx);
+    }
+  }
+  if (e.data?.action === "prevLesson" || e.data === "prevLesson") {
+    document.getElementById("btn-back").click();
+  }
+  if (e.data?.action === "enableNext") {
+    const wrap = document.getElementById("btn-next-wrap");
+    wrap.classList.remove("disabled-next");
+    wrap.classList.add("enabled");
+    wrap.style.cursor = "pointer";
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (e.code === "Space")   { e.preventDefault(); if (!isShowingFrame) { player.isPlaying ? player.pause() : player.play(); } }
+  if (e.code === "Escape")  { document.getElementById("chapter-panel").classList.contains("open") ? closeChapterPanel() : openExitModal(); }
+  if (!player.isPlaying && !isShowingFrame) {
+    if (e.code === "ArrowRight") player.drawFrame(Math.min(player.currentFrame + 1, TOTAL_FRAMES));
+    if (e.code === "ArrowLeft")  player.drawFrame(Math.max(player.currentFrame - 1, 1));
+  }
+});
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+buildChapterList();
+syncPlayPauseBtn();
+player.loadFrames();
+</script>
+</body>
+</html>

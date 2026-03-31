@@ -1,0 +1,23 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+	<title>Destination Math: Counting from 1 to 5</title>
+	<script language="JavaScript">
+<java>
+ 	/* Get the session information. For use if users browser has cookie disabled.*/
+		 out.println ("	 var dynamoSession =\"" + response.encodeUrl("") + "\"");
+</java>
+		var tutorialName = "eaa_"
+		var ActivityType = "W1"
+		var ActivityID = "5412"
+		var AssignmentID = 0
+		var AtomID = ""
+		var Keypress = 0
+	</script>
+	<script language="JavaScript" src="../../../../../kControl.js"></script>
+</head>
+ 	<body bgcolor=black onLoad="InitVariables();" onUnload="updateProgress();" onMove="positionExplore()" onFocus="focusExplore()">
+	<P>
+ <SCRIPT>GenerateHTML("../../../../..");if(InternetExplorer)generateLayers();</SCRIPT>
+</body>
+</html>
