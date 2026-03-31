@@ -619,7 +619,7 @@ position: absolute;
   scale: 2.5;
     opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s linear;
 }
 #main-canvas {
   background: transparent !important;
@@ -630,8 +630,8 @@ position: absolute;
 </head>
 <body>
 
-<div id="drag-ghost"><img src="images/1_up.png" alt=""></div>
-<div id="snap-ghost"><img src="images/1_up.png" alt=""></div>
+<div id="drag-ghost"><img src="images/shape17.svg" alt=""></div>
+<div id="snap-ghost"><img src="images/shape17.svg" alt=""></div>
 
 <!-- EXIT CONFIRM MODAL -->
 <div class="modal-overlay" id="exit-modal">
@@ -1077,7 +1077,7 @@ function endDrag(releaseVX, releaseVY) {
       snapGhost.style.display = "none";
       el.classList.add("hidden");
       el.classList.remove("dragging");
-      nextDz.innerHTML = `<img src="images/1_up.png" style="width:32px;height:32px;display:block;margin:${(ZONE_SIZE-32)/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
+      nextDz.innerHTML = `<img src="images/shape17.svg" style="width:32px;height:32px;display:block;margin:${(ZONE_SIZE-23)/2}px auto 0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">`;
       dropZoneCounter++;
       playEggSounds(dropZoneCounter);
       player.onCorrectDrop(nextDz.dataset.frame);
@@ -1152,7 +1152,7 @@ function buildQuestion(fn) {
     el.dataset.value   = egg.value;
     el.style.left      = egg.x + "px";
     el.style.top       = egg.y + "px";
-    el.innerHTML       = `<img src="images/1_up.png" alt="egg" style="width:32px;height:32px;display:block;">`;
+    el.innerHTML       = `<img src="images/shape17.svg" alt="egg" style="width:32px;height:32px;display:block;">`;
     if (!dragUnlocked) el.classList.add("locked-drag");
     dragLayer.appendChild(el);
     makeDraggable(el);
@@ -1205,29 +1205,37 @@ const player = {
     this.currentFrame = n;
   },
 
-  play(from) {
-    if (this.isPlaying) return;
-    this.isPlaying = true; this.isWaiting = false; clearQuestion();
-    const sf = from !== undefined ? from : this.currentFrame + 1;
-    audio.currentTime = (sf - 1) / FPS;
-    audio.play().catch(() => {});
-    if (from !== undefined) this.currentFrame = from - 1;
-    if (!from || from === 1) {
-      lessonAudio.currentTime = 0;
-      lessonAudio._waiting    = false;
-      lessonAudio.play().catch(() => {});
-    } else if (!lessonAudio._waiting && lessonAudio.paused && !lessonAudio.ended) {
-      lessonAudio.play().catch(() => {});
+play(from) {
+  if (this.isPlaying) return;
+showBackground();
+  this.isPlaying = true;
+  this.isWaiting = false;
+  clearQuestion();
+
+  if (from !== undefined) {
+    this.currentFrame = from - 1;
+    audio.currentTime = (from - 1) / FPS;
+  }
+
+  audio.play().catch(() => {});
+  lessonAudio.play().catch(() => {});
+
+  this.interval = setInterval(() => {
+    if (this.isWaiting) return;
+
+    const nxt = this.currentFrame + 1;
+    if (nxt > TOTAL_FRAMES) {
+      this.stop();
+      return;
     }
-    this.interval = setInterval(() => {
-      if (this.isWaiting) return;
-      const nxt = this.currentFrame + 1;
-      if (nxt > TOTAL_FRAMES) { this.stop(); return; }
-      this.drawFrame(nxt);
-      if (QUESTIONS[nxt]) this.startQuestion(nxt);
-    }, 1000 / FPS);
-    syncPlayPauseBtn();
-  },
+
+    this.drawFrame(nxt);
+
+    if (QUESTIONS[nxt]) this.startQuestion(nxt);
+  }, 1000 / FPS);
+
+  syncPlayPauseBtn();
+},
 
   stop()  { this.isPlaying = false; clearInterval(this.interval); this.interval = null; audio.pause(); lessonAudio.pause(); syncPlayPauseBtn(); },
   pause() { this.stop(); },
@@ -1368,7 +1376,6 @@ document.getElementById("btn-playpause").onclick = () => {
     if (player.isPlaying) {
       player.pause();
     } else {
-      showBackground(); 
       player.play();
     }
   }
