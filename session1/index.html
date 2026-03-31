@@ -311,6 +311,7 @@
     overflow: hidden;
     display: flex;
     justify-content: center;
+    align-items: center;
   }
 
   #session-frame {
@@ -357,19 +358,22 @@
     letter-spacing: 0.5px;
   }
 
-  #main-canvas { 
-  height: 100%; 
-  display: block;
-  position: relative;
-  z-index: 1;
-  background: transparent;
-}
+ 
 
   /* ── DRAG LAYER — absolute inside canvas-wrap ── */
-  #drag-layer {
-    position:absolute; top:0; left:0; width:100%; height:100%;
-    pointer-events:none; z-index:20;
-  }
+ #drag-layer {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: 590px;
+  height: 410px;
+
+  pointer-events: none;
+  z-index: 20;
+}
 
   /* ── EGG ── */
   .egg {
@@ -622,9 +626,18 @@ position: absolute;
   transition: opacity 0.2s linear;
 }
 #main-canvas {
-  background: transparent !important;
-  position: relative;
+  width: 590px;
+  height: 410px;
+ position: absolute;
+  top: 65%;
+  left: 61%;
+  transform: translate(-50%, -50%);
   z-index: 1;
+  scale: 1.47;
+}
+
+canvas {
+  image-rendering: auto;
 }
 </style>
 </head>
@@ -900,34 +913,34 @@ lessonAudio.addEventListener("timeupdate", () => {
 });
 
 const panImg = new Image();
-panImg.src = "images/48.png";
+panImg.src = "images/48.svg";
 
 // ═══════════════════════════════════════════════
 // QUESTION DATA
 // ═══════════════════════════════════════════════
 const EGG_POSITIONS = [
-  { x: 361, y: 496 },
-  { x: 381, y: 474 },
-  { x: 415, y: 461 },
-  { x: 416, y: 494 },
-  { x: 447, y: 474 },
-  { x: 481, y: 469 },
-  { x: 430, y: 530 },
-  { x: 472, y: 501 },
-  { x: 511, y: 491 },
-  { x: 500, y: 533 },
+  { x: -73, y: 410 },
+  { x: -50, y: 383 },
+  { x: -12, y: 374 },
+  { x: -14, y: 407 },
+  { x: -5, y: 443 },
+  { x: 18, y: 387 },
+  { x: 50, y: 378 },
+  { x: 44, y: 414 },
+  { x: 70, y: 443 },
+  { x: 80, y: 405 },
 ];
 const ZONE_POSITIONS = [
-  { x: 621, y: 121 },
-  { x: 682, y: 120 },
-  { x: 624, y: 173 },
-  { x: 682, y: 175 },
-  { x: 623, y: 229 },
-  { x: 678, y: 229 },
-  { x: 624, y: 282 },
-  { x: 681, y: 281 },
-  { x: 627, y: 335 },
-  { x: 682, y: 337 },
+  { x: 196, y: 19 },
+  { x: 261, y: 19 },
+  { x: 200, y: 75 },
+  { x: 261, y: 75 },
+  { x: 202, y: 131 },
+  { x: 257, y: 134 },
+  { x: 201, y: 188 },
+  { x: 258, y: 188 },
+  { x: 199, y: 241 },
+  { x: 260, y: 239 },
 ];
 const ZONE_SIZE = 34;
 
@@ -961,8 +974,30 @@ function playEggSounds(idx) {
   a1.addEventListener("ended", () => a2.play().catch(() => {}));
 }
 
-const canvas     = document.getElementById("main-canvas");
-const ctx        = canvas.getContext("2d");
+const canvas = document.getElementById("main-canvas");
+const ctx = canvas.getContext("2d");
+
+function setupCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+
+  const logicalWidth = 590;
+  const logicalHeight = 410;
+
+  canvas.width  = logicalWidth * dpr;
+  canvas.height = logicalHeight * dpr;
+
+  canvas.style.width  = logicalWidth + "px";
+  canvas.style.height = logicalHeight + "px";
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+}
+
+setupCanvas();
+window.addEventListener("resize", setupCanvas);
 const dragLayer  = document.getElementById("drag-layer");
 const feedbackEl = document.getElementById("feedback");
 
@@ -1172,28 +1207,40 @@ const player = {
   isPlaying: false, isWaiting: false, waitingAt: null,
   interval: null, score: 0, correctInQuestion: 0,
 
-  async loadFrames() {
-    const all = [];
-    for (let i = 1; i <= TOTAL_FRAMES; i++) {
-      const img = new Image();
-      all.push(new Promise(res => {
-        img.onload  = () => res({ i, img });
-        img.onerror = () => res({ i, img: null });
-        fetch(FRAMES_PATH + i + ".svg")
-  .then(res => res.text())
-  .then(svgText => {
-    const cleaned = svgText
-      .replace(/<rect[^>]*fill="[^"]*"[^>]*>/gi, '') // remove background rect
-      .replace(/background:[^;"']+/gi, 'background:none');
+async loadFrames() {
+  const all = [];
 
-    const blob = new Blob([cleaned], { type: "image/svg+xml" });
-    img.src = URL.createObjectURL(blob);
+  for (let i = 1; i <= TOTAL_FRAMES; i++) {
+    all.push(new Promise(async (resolve) => {
+      const img = new Image();
+
+      img.onload  = () => resolve({ i, img });
+      img.onerror = () => resolve({ i, img: null });
+
+      try {
+        const response = await fetch(FRAMES_PATH + i + ".svg");
+        const svgText = await response.text();
+
+        const cleaned = svgText
+          .replace(/<rect[^>]*fill="[^"]*"[^>]*>/gi, '')
+          .replace(/background:[^;"']+/gi, 'background:none');
+
+        const blob = new Blob([cleaned], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+
+        img.src = url;
+      } catch (err) {
+        resolve({ i, img: null });
+      }
+    }));
+  }
+
+  (await Promise.all(all)).forEach(({ i, img }) => {
+    if (img) this.frames[i] = img;
   });
-      }));
-    }
-    (await Promise.all(all)).forEach(({ i, img }) => { if (img) this.frames[i] = img; });
-    this.drawFrame(1);
-  },
+
+  this.drawFrame(1);
+},
 
   drawFrame(n) {
     const img = this.frames[n];
@@ -1207,21 +1254,28 @@ const player = {
 
 play(from) {
   if (this.isPlaying) return;
-showBackground();
+  showBackground();
   this.isPlaying = true;
-  this.isWaiting = false;
-  clearQuestion();
 
+  // Chỉ reset isWaiting khi play từ đầu (có from), KHÔNG reset khi resume
   if (from !== undefined) {
+    this.isWaiting = false;
+    clearQuestion();
     this.currentFrame = from - 1;
     audio.currentTime = (from - 1) / FPS;
+    lessonAudio.play().catch(() => {});
+  } else {
+    // Resume: nếu đang waiting (có question) thì không làm gì với question
+    audio.play().catch(() => {});
+    if (!lessonAudio._waiting) {
+      lessonAudio.play().catch(() => {});
+    }
   }
 
   audio.play().catch(() => {});
-  lessonAudio.play().catch(() => {});
 
   this.interval = setInterval(() => {
-    if (this.isWaiting) return;
+    if (this.isWaiting) return;  // vẫn chờ nếu đang có question
 
     const nxt = this.currentFrame + 1;
     if (nxt > TOTAL_FRAMES) {
@@ -1236,7 +1290,6 @@ showBackground();
 
   syncPlayPauseBtn();
 },
-
   stop()  { this.isPlaying = false; clearInterval(this.interval); this.interval = null; audio.pause(); lessonAudio.pause(); syncPlayPauseBtn(); },
   pause() { this.stop(); },
 
