@@ -304,22 +304,8 @@ export default function App() {
     : 'Screen 1';
 
   return (
-    <div id="scale-root" ref={scaleRootRef}>
-      {/* Fixed drag ghosts — direct children of scale-root (same as original HTML) */}
-      <div
-        id="drag-ghost"
-        style={{
-          display: ghost?.visible ? 'block' : 'none',
-          left: ghost ? ghost.x : 0,
-          top: ghost ? ghost.y : 0,
-        }}
-      >
-        <img src={GAME.EGG_IMG} alt="" />
-      </div>
-      <div id="snap-ghost" ref={snapGhostRef}>
-        <img src={GAME.EGG_IMG} alt="" />
-      </div>
-
+    <>
+      <div id="scale-root" ref={scaleRootRef}>
       <div className="shell">
         <TopBar
           label="Numbers to 100"
@@ -403,6 +389,22 @@ export default function App() {
         onCancel={() => setExitModalOpen(false)}
         onConfirm={() => { window.location.href = '/'; }}
       />
-    </div>
+      </div>
+
+      {/* 必须在 scale-root 外：fixed + clientX/Y 为视口坐标；若在 transform 内会整体缩放导致与指针错位 */}
+      <div
+        id="drag-ghost"
+        style={{
+          display: ghost?.visible ? 'block' : 'none',
+          left: ghost ? ghost.x : 0,
+          top: ghost ? ghost.y : 0,
+        }}
+      >
+        <img src={GAME.EGG_IMG} alt="" />
+      </div>
+      <div id="snap-ghost" ref={snapGhostRef}>
+        <img src={GAME.EGG_IMG} alt="" />
+      </div>
+    </>
   );
 }
