@@ -3,6 +3,19 @@ import { GAME } from '../config';
 
 const HIT_RADIUS = 70;
 
+/** 视口坐标 → #drag-layer 内与 .egg 一致的 left/top（祖先含 transform: scale 时必须换算） */
+function clientToDragLayer(layer, clientX, clientY) {
+  if (!layer) return { x: clientX, y: clientY };
+  const rect = layer.getBoundingClientRect();
+  const w = layer.offsetWidth;
+  const h = layer.offsetHeight;
+  if (rect.width <= 0 || rect.height <= 0) return { x: clientX, y: clientY };
+  return {
+    x: ((clientX - rect.left) / rect.width) * w,
+    y: ((clientY - rect.top) / rect.height) * h,
+  };
+}
+
 export function useDragDrop({ question, dragUnlocked, onCorrectDrop, onEggSound, snapGhostRef }) {
   const [ghost, setGhost] = useState(null);
   const [zones, setZones] = useState([]);
@@ -105,10 +118,11 @@ export function useDragDrop({ question, dragUnlocked, onCorrectDrop, onEggSound,
     const origin = eggOriginRef.current[id];
     if (!origin) return;
 
+    const { x: lx, y: ly } = clientToDragLayer(layer, releaseX, releaseY);
     // Store current position for transition
     el.classList.remove('returning');
-    el.style.left = releaseX + 'px';
-    el.style.top = releaseY + 'px';
+    el.style.left = `${lx}px`;
+    el.style.top = `${ly}px`;
     el.getBoundingClientRect();
     el.classList.add('returning');
     el.style.left = origin.ox + 'px';
@@ -149,8 +163,9 @@ export function useDragDrop({ question, dragUnlocked, onCorrectDrop, onEggSound,
     setZones((prev) =>
       prev.map((dz) => {
         if (dz.filled) return dz;
-        const rect = dz._rect;
-        if (!rect) return dz;
+        const node = typeof document !== 'undefined' ? document.getElementById(dz.id) : null;
+        if (!node) return dz;
+        const rect = node.getBoundingClientRect();
         const dcx = rect.left + rect.width / 2;
         const dcy = rect.top + rect.height / 2;
         const active = Math.hypot(cx - dcx, cy - dcy) < HIT_RADIUS;
