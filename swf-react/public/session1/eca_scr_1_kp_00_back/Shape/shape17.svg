@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1"
+xmlns="http://www.w3.org/2000/svg"
+xmlns:xlink="http://www.w3.org/1999/xlink"
+width="517px" height="89px"
+xml:space="preserve">
+<g id="25" transform="matrix(1, 0, 0, 1, 258.9, 44.3)">
+<radialGradient
+id="RadialGradID_22" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-0.0896149, -0.438965, 0.44751, -0.0663452, 155.1, -62.9)" spreadMethod ="pad" cx="0" cy="0" r="819.2" fx="0" fy="0" >
+<stop  offset="0"  style="stop-color:#FFFBF0;stop-opacity:1" />
+<stop  offset="1"  style="stop-color:#FFFFFF;stop-opacity:0" />
+</radialGradient>
+<path style="fill:url(#RadialGradID_22) " d="M64.15,-11.75Q72.3 -4.3 -8.45 -3.9Q-72.05 -3.85 -61.9 6.65Q-54.8 16.1 -97 18.25Q-139.25 20.35 -132.5 25.15Q-126 29.2 -180.6 31.3Q-223.25 32.75 -216.05 38.05Q-210.4 41.5 -258.9 44.1Q-216.15 40.25 -222.5 37Q-230.95 31.95 -191.65 29.45Q-140.85 25.8 -148.35 22.55Q-155.1 16.9 -93.5 12.9Q-61.95 11.25 -72.65 2.7Q-83.4 -5.9 -24.65 -8.2Q49.15 -11 40.5 -18.6Q26.65 -34.9 220 -43.55Q298.35 -46.75 214.55 -36.45Q189.25 -33.65 121.75 -29Q54.25 -24.35 64.15 -11.75" />
+</g>
+</svg>

@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 2 - Numbers 11-20</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #canvas-wrap {
+    width: 590px;
+    height: 410px;
+    position: relative;
+    transform: scale(1.4);
+    transform-origin: center center;
+  }
+  #main-canvas {
+    display: block;
+    width: 590px;
+    height: 410px;
+  }
+  #frame-counter {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    z-index: 5;
+    pointer-events: none;
+    text-shadow: 0 0 4px #000;
+  }
+  #s2-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    z-index: 10;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+  }
+  #s2-loading.hidden { display: none; }
+
+  /* ── Coordinate debug overlay ── */
+  #coord-debug {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #ff0;
+    background: rgba(0,0,0,0.6);
+    padding: 3px 8px;
+    border-radius: 4px;
+    z-index: 20;
+    pointer-events: none;
+    display: none;
+  }
+  #coord-debug.visible { display: block; }
+
+  /* ── Con-so button ──
+     Canvas space: 590×410. Target center: x=431, y=339. Button: 52×38.
+     left = 431 − 26 = 405, top = 339 − 19 = 301  */
+  #cons0-btn {
+    position: absolute;
+    left: 405px;
+    top: 325px;
+    width: 52px;
+    height: 38px;
+    cursor: pointer;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  #cons0-btn.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #cons0-btn img {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  #cons0-btn:hover {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 8px rgba(255, 200, 100, 0.8));
+  }
+  #cons0-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* ── "Click me!" hint ── */
+  #cons0-hint {
+    position: absolute;
+    left: 397px;
+    top: 345px;
+    font-family: 'Fredoka', cursive, sans-serif;
+    font-size: 11px;
+    color: #ffe0a0;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    white-space: nowrap;
+  }
+  #cons0-hint.visible {
+    opacity: 1;
+    animation: hintPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes hintPulse {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(-3px); opacity: 0.7; }
+  }
+</style>
+</head>
+<body>
+<div id="canvas-wrap">
+  <div id="s2-loading">Đang tải 544 khung hình…</div>
+
+  <canvas id="main-canvas" width="590" height="410"></canvas>
+
+  <!-- Con-so clickable button (top-right) -->
+  <button id="cons0-btn" title="Nhấn để tiếp tục">
+    <img src="shapes/con-so.svg" alt="Con sò" />
+  </button>
+  <div id="cons0-hint"></div>
+
+  <!-- Coordinate debug overlay -->
+  <div id="coord-debug">x: 0, y: 0</div>
+</div>
+
+<script>
+const FRAMES_PATH   = 'frames/';
+const SOUNDS_PATH   = 'sounds/';
+const TOTAL_FRAMES  = 544;
+const FPS           = 24;
+const PAUSE_AT      = 242;   // dừng auto ở frame này, chờ bấm con-sò
+const RESUME_AT     = 244;   // tiếp tục từ frame này khi bấm con-sò
+const SEG2_END      = 543;   // kết thúc segment 2
+const FINAL_FRAME   = 544;   // frame cuối → gọi complete
+const SEG1_AUDIO_END = 247;  // frame cuối audio -1_10-247.mp3
+const SEG2_AUDIO_START = 271; // frame bắt đầu audio -1_271-  .mp3
+const CONSO_AUDIO   = SOUNDS_PATH + '-1_10-247.mp3';
+const SEG2_AUDIO    = SOUNDS_PATH + '-1_271-544.mp3';
+
+/** Vị trí đặt shapes/1.svg … 11.svg lên nền anh-dung-10s (tọa độ canvas 590×410, căn giữa ảnh) */
+const EGG_OVERLAY_SPOTS = [
+  { x: 218, y: 88 },
+  { x: 215, y: 126 },
+  { x: 215, y: 164 },
+  { x: 216, y: 201 },
+  { x: 215, y: 239 },
+  { x: 256, y: 86 },
+  { x: 255, y: 125 },
+  { x: 255, y: 165 },
+  { x: 255, y: 201 },
+  { x: 256, y: 238 },
+  { x: 331, y: 239 },
+];
+const EGG_OVERLAY_MAX = 36;
+
+const canvas = document.getElementById('main-canvas');
+const ctx    = canvas.getContext('2d');
+
+/* ── Audio ── */
+const seg1Audio = new Audio(CONSO_AUDIO);
+seg1Audio.preload = 'auto';
+
+const seg2Audio = new Audio(SEG2_AUDIO);
+seg2Audio.preload = 'auto';
+
+function setupCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = 590 * dpr;
+  canvas.height = 410 * dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality  = 'high';
+}
+
+setupCanvas();
+
+function cleanSvgText(svgText) {
+  return svgText
+    .replace(/<rect[^>]*fill="[^"]*"[^>]*>/gi, '')
+    .replace(/background:[^;"']+/gi, 'background:none');
+}
+
+/* ── UI helpers ── */
+const $cons0Btn  = document.getElementById('cons0-btn');
+const $cons0Hint = document.getElementById('cons0-hint');
+
+function showCons0() {
+  $cons0Btn.classList.add('visible');
+  $cons0Hint.classList.add('visible');
+}
+function hideCons0() {
+  $cons0Btn.classList.remove('visible');
+  $cons0Hint.classList.remove('visible');
+}
+function setCounter(n) {
+  const el = document.getElementById('frame-num');
+  if (el) el.textContent = String(n);
+}
+
+/* ── Player ── */
+const player = {
+  currentFrame: 0,
+  isPlaying: false,
+  _rafId: null,
+  _anhDungImg: null,
+  _anhDungShown: false,
+  _eggOverlayImgs: [],
+  _eggOverlayStep: 0,
+  _eggOverlayTimer: null,
+  _eggOverlayDone: false,
+
+  /* phase:
+       'loading'  – đang tải
+       'seg1'     – auto chạy segment 1 (1→PAUSE_AT)
+       'waiting'  – chờ bấm con-sò (tại PAUSE_AT)
+       'seg2'     – auto chạy segment 2 (RESUME_AT→SEG2_END)
+       'done'     – frame 544, complete
+  */
+  phase: 'loading',
+
+  /** Sparse cache — only frames that have been loaded */
+  _cache: {},
+  /** In-flight load promises so we don't double-fetch the same frame */
+  _loading: {},
+
+  /** Load one frame (cached / deduped) and store in _cache */
+  _loadOne(i) {
+    if (this._cache[i]) return Promise.resolve(this._cache[i]);
+    if (this._loading[i]) return this._loading[i];
+    const p = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        this._cache[i] = img;
+        resolve(img);
+      };
+      img.onerror = () => {
+        this._cache[i] = null;
+        resolve(null);
+      };
+      fetch(FRAMES_PATH + i + '.svg')
+        .then((r) => (r.ok ? r.text() : Promise.reject()))
+        .then((svgText) => {
+          const blob = new Blob([cleanSvgText(svgText)], { type: 'image/svg+xml' });
+          img.src = URL.createObjectURL(blob);
+        })
+        .catch(() => resolve(null));
+    });
+    this._loading[i] = p;
+    return p;
+  },
+
+  /** Load a range in the background, fire-and-forget */
+  async _preloadRange(from, to) {
+    const limit = 16;
+    for (let i = from; i <= to; i += limit) {
+      const batch = [];
+      for (let j = i; j < i + limit && j <= to; j++) batch.push(this._loadOne(j));
+      await Promise.all(batch);
+    }
+  },
+
+  /** Called by player before drawing a frame — ensures frame is ready.
+   *  Returns the Image (or null).  */
+  async _ensureFrame(n) {
+    if (!this._cache[n]) await this._loadOne(n);
+    return this._cache[n] || null;
+  },
+
+  async loadFrames() {
+    const loadingEl = document.getElementById('s2-loading');
+    if (loadingEl) {
+      loadingEl.classList.remove('hidden');
+      loadingEl.textContent = 'Đang tải…';
+    }
+
+    // Load frame 1 first — as soon as it's ready, hide overlay and start playing
+    await this._loadOne(1);
+    this.drawFrame(1);
+
+    // Preload ảnh tĩnh freeze, chờ xong trước khi bắt đầu
+    this._anhDungImg = new Image();
+    this._anhDungImg.src = 'shapes/anh-dung-10s.svg';
+    await new Promise(r => { this._anhDungImg.onload = r; this._anhDungImg.onerror = r; });
+
+    this._eggOverlayImgs = [];
+    for (let i = 1; i <= EGG_OVERLAY_SPOTS.length; i++) {
+      const im = new Image();
+      im.src = 'shapes/' + i + '.svg';
+      this._eggOverlayImgs.push(im);
+    }
+    await Promise.all(
+      this._eggOverlayImgs.map(
+        (im) => new Promise((r) => { im.onload = r; im.onerror = r; })
+      )
+    );
+
+    if (loadingEl) loadingEl.classList.add('hidden');
+    try {
+      parent.postMessage({ action: 'framesLoaded' }, '*');
+    } catch (e) {}
+
+    // Continue pre-loading ahead in background (fire-and-forget)
+    this._preloadRange(2, Math.min(TOTAL_FRAMES, 64));
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this._startSeg1());
+    });
+  },
+
+  _startSeg1() {
+    this.phase = 'seg1';
+    seg1Audio.currentTime = 0;
+    seg1Audio.play().catch(() => {});
+    this._anhDungShown = false;
+    this._doPlay(1, PAUSE_AT);
+  },
+
+  _doPlay(from, to) {
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    try { parent.postMessage({ action: 'playing' }, '*'); } catch (e) {}
+
+    let frozenUntilAudioTime = null;
+
+    // Khi resume từ pause, khôi phục overlay state đã lưu
+    if (this.phase === 'seg2' && this._seg2PausedOverlayStep !== undefined) {
+      this._eggOverlayStep = this._seg2PausedOverlayStep;
+      this._anhDungShown = true;
+      this._seg2PausedOverlayStep = undefined;
+      this._seg2PausedAt = undefined;
+      this._drawAnhDung();
+      if (this._eggOverlayStep >= EGG_OVERLAY_SPOTS.length) {
+        this._eggOverlayDone = true;
+      }
+      // Tính lại từ audio time đã lưu
+      const savedT = this._seg2PausedAt ?? 0;
+      if (savedT >= 10) frozenUntilAudioTime = savedT;
+      this._seg2PausedAt = undefined;
+    }
+
+    const tick = () => {
+      if (!this.isPlaying) return;
+
+      if (this.phase === 'seg1') {
+        const nxt = this.currentFrame + 1;
+        if (nxt > to) { this._onReachEnd(to); return; }
+        this.drawFrame(nxt);
+
+      } else if (this.phase === 'seg2') {
+        const t = seg2Audio.currentTime;
+
+        if (this._eggOverlayDone) {
+          if (seg2Audio.ended) {
+            this._clearEggOverlayTimer();
+            this._onReachEnd(to);
+            return;
+          }
+          this._rafId = requestAnimationFrame(tick);
+          return;
+
+        } else if (frozenUntilAudioTime !== null) {
+          if (!this._eggOverlayTimer && this._eggOverlayStep < EGG_OVERLAY_SPOTS.length) {
+            if (this._eggOverlayStep === 0) this._eggOverlayStep = 1;
+            this._drawAnhDung();
+            this._eggOverlayTimer = setInterval(() => {
+              if (this._eggOverlayStep < EGG_OVERLAY_SPOTS.length) {
+                this._eggOverlayStep++;
+                this._drawAnhDung();
+              } else {
+                this._eggOverlayDone = true;
+                this._clearEggOverlayTimer();
+              }
+            }, 1000);
+          }
+          if (seg2Audio.ended) {
+            this._clearEggOverlayTimer();
+            frozenUntilAudioTime = null;
+            this._onReachEnd(to);
+            return;
+          }
+        } else if (t >= 10) {
+          frozenUntilAudioTime = t;
+          this._anhDungShown = true;
+          this._drawAnhDung();
+          if (seg2Audio.ended) {
+            this._clearEggOverlayTimer();
+            frozenUntilAudioTime = null;
+            this._onReachEnd(to);
+            return;
+          }
+        } else {
+          // Đừng vẽ frame -1 (freeze) khi audio đang chạy — bỏ qua tạm thời
+          const frame = Math.round(RESUME_AT + t * FPS);
+          if (frame >= RESUME_AT) {
+            const clamped = Math.max(RESUME_AT, Math.min(frame, to));
+            if (clamped !== this.currentFrame) this.drawFrame(clamped);
+          }
+          if (frame >= to) { this._onReachEnd(to); return; }
+        }
+      }
+
+      this._rafId = requestAnimationFrame(tick);
+    };
+
+    this._rafId = requestAnimationFrame(tick);
+  },
+
+  _clearEggOverlayTimer() {
+    if (this._eggOverlayTimer != null) {
+      clearInterval(this._eggOverlayTimer);
+      this._eggOverlayTimer = null;
+    }
+  },
+
+  _drawEggAt(img, spot) {
+    if (!img || !img.complete || !img.naturalWidth) return;
+    let w = img.naturalWidth;
+    let h = img.naturalHeight;
+    if (w > EGG_OVERLAY_MAX) {
+      h = (h * EGG_OVERLAY_MAX) / w;
+      w = EGG_OVERLAY_MAX;
+    }
+    ctx.save();
+    ctx.drawImage(img, spot.x - w / 2, spot.y - h / 2, w, h);
+    ctx.restore();
+  },
+
+  _drawAnhDung() {
+    this.currentFrame = -1;
+    ctx.clearRect(0, 0, 590, 410);
+    if (this._anhDungImg && this._anhDungImg.complete && this._anhDungImg.naturalWidth > 0) {
+      ctx.drawImage(this._anhDungImg, 0, 0, 590, 410);
+    }
+    const n = Math.min(this._eggOverlayStep, EGG_OVERLAY_SPOTS.length);
+    for (let i = 0; i < n; i++) {
+      this._drawEggAt(this._eggOverlayImgs[i], EGG_OVERLAY_SPOTS[i]);
+    }
+    setCounter('*');
+  },
+
+  async drawFrame(n) {
+    const target = n;
+    this.currentFrame = target;
+    const img = await this._ensureFrame(target);
+    if (this.currentFrame !== target) return;
+    if (!img) return;
+    ctx.clearRect(0, 0, 590, 410);
+    ctx.drawImage(img, 0, 0, 590, 410);
+    setCounter(n);
+
+    if (this.phase === 'seg2') {
+      this._preloadRange(n + 1, Math.min(n + 48, TOTAL_FRAMES));
+    }
+  },
+
+  stop() {
+    this.isPlaying = false;
+    this._clearEggOverlayTimer();
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    seg1Audio.pause();
+    seg2Audio.pause();
+    // Lưu trạng thái seg2 để resume đúng vị trí
+    if (this.phase === 'seg2') {
+      this._seg2PausedAt = seg2Audio.currentTime;
+      this._seg2PausedOverlayStep = this._eggOverlayStep;
+      this._eggOverlayDone = false;
+    }
+    try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+  },
+
+  pause() { this.stop(); },
+
+  restart() {
+    this.stop();
+    this.phase = 'loading';
+    hideCons0();
+    this.currentFrame = 0;
+    this._cache = {};
+    this._loading = {};
+    this._anhDungShown = false;
+    this._eggOverlayStep = 0;
+    this._eggOverlayDone = false;
+    this._seg2PausedAt = undefined;
+    this._seg2PausedOverlayStep = undefined;
+    this.drawFrame(1);
+    requestAnimationFrame(() => { requestAnimationFrame(() => this._startSeg1()); });
+  },
+
+  goToFrame(n) {
+    this.stop();
+    this.drawFrame(Math.max(1, Math.min(n, TOTAL_FRAMES)));
+  },
+
+  _onReachEnd(to) {
+    this.isPlaying = false;
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+
+    if (to === PAUSE_AT && this.phase === 'seg1') {
+      this.phase = 'waiting';
+      showCons0();
+      try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+      return;
+    }
+
+    if (to === SEG2_END) {
+      this.phase = 'done';
+      this._clearEggOverlayTimer();
+      this._eggOverlayDone = false;
+      hideCons0();
+      /* Không gọi drawFrame(544): frames/544 thường trùng anh-dung-10s và xóa mất overlay.
+         Giữ canvas composite (nền shapes/anh-dung-10s + shapes 1…11) nếu đã vào freeze. */
+      const keepComposite =
+        this._anhDungShown || this._eggOverlayStep > 0;
+      if (keepComposite) {
+        this.currentFrame = FINAL_FRAME;
+        this._drawAnhDung();
+        setCounter(FINAL_FRAME);
+      } else {
+        this.drawFrame(FINAL_FRAME);
+      }
+      this._anhDungShown = false;
+      try { parent.postMessage({ action: 'sessionComplete', session: 2 }, '*'); parent.postMessage({ action: 'enableNext' }, '*'); } catch (e) {}
+      return;
+    }
+  },
+
+  resumeFromCons0() {
+    if (this.phase !== 'waiting') return;
+    hideCons0();
+    this.phase = 'seg2';
+    this._clearEggOverlayTimer();
+    this._eggOverlayStep = 0;
+    this._eggOverlayDone = false;
+    this._anhDungShown = false;
+    this._seg2PausedAt = undefined;
+    this._seg2PausedOverlayStep = undefined;
+    seg1Audio.pause();
+    seg2Audio.currentTime = 0;
+    seg2Audio.play().catch(() => {});
+    this._doPlay(RESUME_AT, SEG2_END);
+  },
+};
+
+/* ── Con-sò click ── */
+$cons0Btn.addEventListener('click', () => {
+  player.resumeFromCons0();
+});
+
+  /* ── Message từ parent (React shell) ── */
+window.addEventListener('message', (e) => {
+  if (e.data?.action === 'pause') {
+    if (player.phase === 'seg2') {
+      seg2Audio.pause();
+    } else if (player.phase === 'seg1') {
+      seg1Audio.pause();
+    }
+    player.stop();
+  }
+  if (e.data?.action === 'play') {
+    if (player.phase === 'done') {
+      player.restart();
+    } else if (player.phase === 'waiting') {
+      player.resumeFromCons0();
+    } else if (!player.isPlaying) {
+      // đang paused giữa chừng – khởi động lại tick loop
+      if (player.phase === 'seg2') {
+        seg2Audio.play().catch(() => {});
+      } else if (player.phase === 'seg1') {
+        seg1Audio.play().catch(() => {});
+      }
+      player._doPlay(player.currentFrame || 1, player.phase === 'seg1' ? PAUSE_AT : SEG2_END);
+    }
+  }
+  if (e.data?.action === 'restart') player.restart();
+  if (e.data?.action === 'goToFrame') player.goToFrame(e.data.frame);
+  if (e.data?.action === 'prevFrame') {
+    player.goToFrame(Math.max(player.currentFrame - 1, 1));
+  }
+  if (e.data?.action === 'nextFrame') {
+    player.goToFrame(Math.min(player.currentFrame + 1, TOTAL_FRAMES));
+  }
+});
+
+/* ── Start ── */
+/* ── Debug helpers ──
+   Bật click-to-log tọa độ: window.__clickCoords(true)
+   Tắt: window.__clickCoords(false)
+   Khi bật, click vào canvas → in ra { x, y } trong console.
+   Tọa độ x,y là pixel gốc của canvas (590×410).
+
+   Hover hiển thị tọa độ: window.__debugCoords(true) / false
+*/
+const $coordDebug = document.getElementById('coord-debug');
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!$coordDebug.classList.contains('visible')) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = 590 / rect.width;
+  const scaleY = 410 / rect.height;
+  const x = Math.round((e.clientX - rect.left) * scaleX);
+  const y = Math.round((e.clientY - rect.top) * scaleY);
+  $coordDebug.textContent = `x: ${x}, y: ${y}`;
+});
+
+window.__debugCoords = (on) => {
+  if (on) $coordDebug.classList.add('visible');
+  else $coordDebug.classList.remove('visible');
+};
+
+// Click-to-log coords
+let _clickDebug = false;
+canvas.addEventListener('click', (e) => {
+  if (!_clickDebug) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = 590 / rect.width;
+  const scaleY = 410 / rect.height;
+  const x = Math.round((e.clientX - rect.left) * scaleX);
+  const y = Math.round((e.clientY - rect.top) * scaleY);
+  console.log({ x, y });
+});
+window.__clickCoords = (on) => { _clickDebug = on; };
+window.__clickCoords(false); // bật lại bằng __clickCoords(true)
+
+player.loadFrames().catch((err) => console.error('session2 loadFrames', err));
+</script>
+</body>
+</html>

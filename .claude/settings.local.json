@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(mkdir -p ruffle)",
-      "Bash(curl -sL \"https://github.com/nickskelton/nickskelton.github.io/raw/master/ruffle/ruffle.js\" -o ruffle_test.js)"
-    ]
-  }
-}

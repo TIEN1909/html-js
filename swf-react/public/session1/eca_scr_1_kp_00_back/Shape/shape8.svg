@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1"
+xmlns="http://www.w3.org/2000/svg"
+xmlns:xlink="http://www.w3.org/1999/xlink"
+width="19px" height="61px"
+xml:space="preserve">
+<g id="20" transform="matrix(1, 0, 0, 1, 10.6, 30.4)">
+<linearGradient
+id="LinearGradID_15" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-0.000732422, 0.00273132, -0.0235901, -0.00631714, -4, 24.55)" spreadMethod ="pad" x1="-819.2" y1="0" x2="819.2" y2="0" >
+<stop  offset="0" style="stop-color:#006600;stop-opacity:1" />
+<stop  offset="1" style="stop-color:#F7BE66;stop-opacity:1" />
+</linearGradient>
+<path style="fill:url(#LinearGradID_15) " d="M-2.3,23.1Q-0.4 18.1 0.05 10.9Q0.25 6 4 -0.6Q7.7 -7.2 7.35 -17.9Q9.1 -7.2 5.6 -0.8Q1.55 6.45 1.55 11.9Q1.55 21.15 -1.45 27.35L-2.3 23.1M-2.5,29.25L-2.55 29.35L-2.95 29.25L-2.5 29.25" />
+<linearGradient
+id="LinearGradID_16" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0, 0.00349426, 0.0244293, 0, -1.15, 23.95)" spreadMethod ="pad" x1="-819.2" y1="0" x2="819.2" y2="0" >
+<stop  offset="0" style="stop-color:#006600;stop-opacity:1" />
+<stop  offset="1" style="stop-color:#F7BE66;stop-opacity:1" />
+</linearGradient>
+<path style="fill:url(#LinearGradID_16) " d="M-1.45,27.35L-0.9 29.25L-2.5 29.25L-2.95 29.25L-3.55 29.25Q-2.65 23.4 -4.65 16.2Q-4.3 11.9 -3.25 7.1Q-1.9 0.55 -3.85 -9.4Q-5.65 -18.2 -1.15 -30.4Q-4.25 -17.75 -2.35 -8.65Q-0.5 0.45 -1.55 6.35Q-3.15 16.05 -2.3 23.1L-1.45 27.35" />
+<linearGradient
+id="LinearGradID_17" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0.000244141, 0.00280762, -0.0243225, 0.00213623, -6.7, 26.2)" spreadMethod ="pad" x1="-819.2" y1="0" x2="819.2" y2="0" >
+<stop  offset="0" style="stop-color:#006600;stop-opacity:1" />
+<stop  offset="1" style="stop-color:#F7BE66;stop-opacity:1" />
+</linearGradient>
+<path style="fill:url(#LinearGradID_17) " d="M-3.55,29.25L-3.75 30.25L-6.6 30.5Q-4.2 23.4 -7.6 12Q-9.1 7.35 -7.85 -0.1Q-6.6 -7.6 -10.6 -17.55Q-5.25 -8.1 -6.4 -0.85Q-7.7 7.3 -5.85 12.45L-4.65 16.2Q-2.65 23.4 -3.55 29.25" />
+</g>
+</svg>
