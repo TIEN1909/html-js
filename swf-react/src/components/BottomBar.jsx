@@ -34,9 +34,9 @@ export default function BottomBar({
       <div
         id="btn-next-wrap"
         className={nextEnabled ? 'enabled' : 'disabled-next'}
-        onClick={() => { if (nextEnabled) onNext(); }}
+        onClick={onNext}
         title="Bài tiếp theo"
-        style={{ cursor: nextEnabled ? 'pointer' : 'default' }}
+        style={{ cursor: 'pointer' }}
       >
         <div id="btn-next-arrow" />
       </div>

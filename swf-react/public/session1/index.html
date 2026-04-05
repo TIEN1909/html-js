@@ -962,10 +962,6 @@ const QUESTIONS = { 233: makeQuestion(233, 10, [1,2,3,4,5,6,7,8,9,10]) };
 let dropZoneCounter = 0;
 let nextSlotIndex = 0;
 
-const AUDIO_PATH = "session1/sounds/lesson_audio.mp3";
-const audio = new Audio(AUDIO_PATH);
-audio.preload = "auto";
-
 function playEggSounds(idx) {
   const f  = 79 + idx * 2, s = f + 1;
   const a1 = new Audio(SOUNDS_PATH + f + ".mp3");

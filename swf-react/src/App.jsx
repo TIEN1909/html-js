@@ -188,13 +188,12 @@ export default function App() {
   }, [isShowingFrame, isPlaying, pause, play]);
 
   const handleNext = useCallback(() => {
-    if (!nextEnabled) return;
     const nextIdx = currentSessionIndex + 1;
     if (nextIdx < CHAPTERS.length) {
       const ch = CHAPTERS[nextIdx];
       if (ch && ch.status !== 'locked') loadSessionInFrame(ch.url, ch.sub, nextIdx);
     }
-  }, [nextEnabled, currentSessionIndex, loadSessionInFrame]);
+  }, [currentSessionIndex, loadSessionInFrame]);
 
   const handleChapterSelect = useCallback((item) => {
     setChapterOpen(false);
