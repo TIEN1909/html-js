@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 3 - Numbers 21-30</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #canvas-wrap {
+    width: 590px;
+    height: 410px;
+    position: relative;
+    transform: scale(1.4);
+    transform-origin: center center;
+  }
+  #main-canvas {
+    display: block;
+    width: 590px;
+    height: 410px;
+  }
+  #frame-counter {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    z-index: 5;
+    pointer-events: none;
+    text-shadow: 0 0 4px #000;
+  }
+  #s3-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    z-index: 10;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+  }
+  #s3-loading.hidden { display: none; }
+
+  /* Debug info */
+  #debug-info {
+    display: none;
+  }
+
+  /* Egg button */
+  #egg-btn {
+    position: absolute;
+    left: 459px;
+    top: 219px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.15s;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  #egg-btn.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #egg-btn img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+  #egg-btn:hover {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 10px rgba(96,165,250,0.7));
+  }
+  #egg-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Click hint */
+  #egg-hint {
+    position: absolute;
+    left: 245px;
+    top: 220px;
+    font-family: 'Fredoka', cursive, sans-serif;
+    font-size: 12px;
+    color: #ffe0a0;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    white-space: nowrap;
+  }
+  #egg-hint.visible {
+    opacity: 0;
+    animation: hintPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes hintPulse {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(-3px); opacity: 0.7; }
+  }
+
+  /* OK button - xác nhận kéo thả */
+  #s3-ok-btn {
+    position: absolute;
+    left: 288px;
+  bottom: -2px;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 32px;
+    cursor: pointer;
+    z-index: 9999999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.15s;
+    background: linear-gradient(135deg, #56c45a, #3fa03a);
+    border: 2px solid #2d8028;
+    border-radius: 8px;
+    font-family: 'Fredoka', cursive, sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+    letter-spacing: 1px;
+  }
+  #s3-ok-btn.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #s3-ok-btn:hover {
+    transform: translateX(-50%) scale(1.1);
+    filter: brightness(1.1);
+  }
+  #s3-ok-btn:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  /* Kéo thả số (Segment 2 xong) — tọa độ trong khung 590×410 */
+  #s3-drag-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 18;
+    pointer-events: none;
+    touch-action: none;
+  }
+  #s3-drag-layer.active {
+    pointer-events: auto;
+  }
+  .s3-tile {
+    position: absolute;
+    width: 52px;
+    height: auto;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+    transition: left 0.22s ease, top 0.22s ease;
+  }
+  .s3-tile.dragging {
+    cursor: grabbing;
+    z-index: 50;
+    transition: none;
+  }
+  .s3-tile.placed {
+    cursor: default;
+    pointer-events: none;
+  }
+  .s3-tile img {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="canvas-wrap">
+  <div id="s3-loading">Đang tải…</div>
+
+  <canvas id="main-canvas" width="590" height="410"></canvas>
+
+  <!-- Kéo thả: 1–5.svg đè lên vị trí số trong frame 188 -->
+  <div id="s3-drag-layer" aria-hidden="true"></div>
+
+  <button id="egg-btn" title="Nhấn để tiếp tục">
+    <img src="../../images/shape17.svg" alt="Trứng" />
+  </button>
+  <div id="egg-hint"></div>
+
+  <!-- Button OK xác nhận kéo thả số vào ô gỗ -->
+  <button id="s3-ok-btn">OK</button>
+
+  <div id="debug-info"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   SEGMENT 1 (frames 1–241, audio ends F234)
+     F1→F234  : audio -1_11-241.mp3 (19.214s, FPS≈12.18)
+     F235→F241: RAF-driven, no audio
+   SEGMENT 2 (frames 1–188 trong segment2/frames/, audio ends F188)
+     F1→F188  : audio -1_10-230.mp3 (18.304s, FPS≈10.27)
+     F189→F734 : audio -1_239-734.mp3 (≈45s, FPS≈12.1)
+   ──────────────────────────────────────────────
+   frames 1–241  : segment1/frames/
+   frames 242-734: segment2/frames/  (242 = F242)
+══════════════════════════════════════════════ */
+const SEG1 = {
+  framesPath   : 'segment1/frames/',
+  audioFile     : 'segment1/sounds/-1_11-241.mp3',
+  totalFrames   : 241,
+  audioDuration : 19.214,
+};
+SEG1.fps = SEG1.totalFrames / SEG1.audioDuration;
+
+const SEG1_REST_TO = 241;
+
+const SEG2 = {
+  framesPath   : 'segment2/frames/',
+  audioFile     : 'segment2/sounds/-1_10-230.mp3',
+  totalFrames   : 188,           // audio ends here → kéo thả
+  audioDuration : 18.304,
+};
+SEG2.fps = SEG2.totalFrames / SEG2.audioDuration;
+
+const SEG3 = {
+  framesPath   : 'segment2/frames/',
+  audioFile     : 'segment2/sounds/-1_239-734.mp3',
+  totalFrames   : 734,           // frames 189→734 trong seg2/frames/
+  audioDuration : 45.0,
+};
+SEG3.fps = (SEG3.totalFrames - 188) / SEG3.audioDuration;
+
+/** Ảnh số 1–5.svg (đặt vào public/images hoặc dùng sẵn segment2/images) */
+function tileImgSrc(n) {
+  return 'segment2/images/' + n + '.svg';
+}
+
+/**
+ * Vị trí ban đầu của các số 1–5 (pixel trong canvas 590×410):
+ * Khớp với vị trí hiển thị trong frame 188.svg
+ */
+const TILE_LAYOUT = [
+  { n: 1, left: 486, top: 334 },
+  { n: 2, left: 362, top: 365 },
+  { n: 3, left: 290, top: 339 },
+  { n: 4, left: 413, top: 301 },
+  { n: 5, left: 209, top: 332 },
+];
+
+/** Ô gỗ (wood slot) – tâm tại (345, 287), tile rộng 52px, cao ~51px */
+const DROP_RECT = {
+  left: 345 - 52 / 2,   // = 319
+  top:  287 - 51 / 2,   // = 261.5
+  width: 52,
+  height: 51
+};
+/** Vùng chấp nhận thả rộng hơn (px) để dễ trúng ô */
+const DROP_SLOP = 16;
+
+/* ── OK button (kéo thả) ── */
+const $okBtn = document.getElementById('s3-ok-btn');
+let s3PendingTile = null; // tile đang chờ xác nhận OK
+
+function showOkBtn() {
+  $okBtn.classList.add('visible');
+}
+function hideOkBtn() {
+  $okBtn.classList.remove('visible');
+  s3PendingTile = null;
+}
+
+$okBtn.addEventListener('click', () => {
+  if (!s3PendingTile) return;
+  const n = parseInt(s3PendingTile.dataset.n, 10);
+
+  if (n === 2) {
+    /* ĐÚNG: ẩn tất cả tile, chạy tiếp segment 3 */
+    hideOkBtn();
+    /* Ẩn tất cả tile */
+    $dragLayer.querySelectorAll('.s3-tile').forEach(t => {
+      t.style.opacity = '0';
+      t.style.pointerEvents = 'none';
+    });
+    player._startSegment3();
+  } else {
+    /* SAI: tile trở về vị trí cũ, vẫn có thể kéo lại */
+    s3PendingTile.classList.remove('dragging');
+    s3PendingTile.style.left = s3PendingTile.dataset.origLeft + 'px';
+    s3PendingTile.style.top = s3PendingTile.dataset.origTop + 'px';
+    s3PendingTile = null;
+  }
+});
+
+const $dragLayer = document.getElementById('s3-drag-layer');
+
+let s3DragState = {
+  tile: null,
+  pointerId: null,
+  offsetX: 0,
+  offsetY: 0,
+  origLeft: 0,
+  origTop: 0,
+};
+
+function clientToWrap(clientX, clientY) {
+  const r = document.getElementById('canvas-wrap').getBoundingClientRect();
+  return {
+    x: ((clientX - r.left) / r.width) * 590,
+    y: ((clientY - r.top) / r.height) * 410,
+  };
+}
+
+function s3PointInDrop(cx, cy) {
+  return (
+    cx >= DROP_RECT.left - DROP_SLOP &&
+    cx <= DROP_RECT.left + DROP_RECT.width + DROP_SLOP &&
+    cy >= DROP_RECT.top - DROP_SLOP &&
+    cy <= DROP_RECT.top + DROP_RECT.height + DROP_SLOP
+  );
+}
+
+function s3EndDragListeners() {
+  document.removeEventListener('pointermove', s3OnDocMove);
+  document.removeEventListener('pointerup', s3OnDocUp);
+  document.removeEventListener('pointercancel', s3OnDocUp);
+}
+
+function s3OnDocMove(e) {
+  if (!s3DragState.tile || s3DragState.pointerId !== e.pointerId) return;
+  const p = clientToWrap(e.clientX, e.clientY);
+  s3DragState.tile.style.left = p.x - s3DragState.offsetX + 'px';
+  s3DragState.tile.style.top = p.y - s3DragState.offsetY + 'px';
+}
+
+function s3OnDocUp(e) {
+  if (!s3DragState.tile || s3DragState.pointerId !== e.pointerId) return;
+  const tile = s3DragState.tile;
+  const origL = s3DragState.origLeft;
+  const origT = s3DragState.origTop;
+  s3EndDragListeners();
+  tile.classList.remove('dragging');
+  try {
+    tile.releasePointerCapture(e.pointerId);
+  } catch (err) {}
+
+  const n = parseInt(tile.dataset.n, 10);
+  const left = parseFloat(tile.style.left);
+  const top = parseFloat(tile.style.top);
+  let w = tile.offsetWidth;
+  let h = tile.offsetHeight;
+  if (w < 8 || h < 8) { w = 52; h = 51; }
+  const cx = left + w / 2;
+  const cy = top + h / 2;
+  const pRel = clientToWrap(e.clientX, e.clientY);
+  const inDrop = s3PointInDrop(cx, cy) || s3PointInDrop(pRel.x, pRel.y);
+
+  s3DragState = {
+    tile: null, pointerId: null, offsetX: 0, offsetY: 0, origLeft: 0, origTop: 0,
+  };
+
+  if (inDrop) {
+    /* Nếu ô gỗ đã có số khác → số cũ quay về vị trí ban đầu */
+    if (s3PendingTile && s3PendingTile !== tile) {
+      s3PendingTile.style.left = s3PendingTile.dataset.origLeft + 'px';
+      s3PendingTile.style.top = s3PendingTile.dataset.origTop + 'px';
+      s3PendingTile.classList.remove('placed');
+    }
+    /* Snap số mới vào giữa ô gỗ */
+    const snapLeft = DROP_RECT.left + (DROP_RECT.width - w) / 2;
+    const snapTop = DROP_RECT.top + (DROP_RECT.height - h) / 2;
+    tile.style.left = snapLeft + 'px';
+    tile.style.top = snapTop + 'px';
+    tile.dataset.origLeft = origL;
+    tile.dataset.origTop = origT;
+    s3PendingTile = tile;
+  } else {
+    /* Thả ngoài vùng → trả về vị trí cũ */
+    tile.style.left = origL + 'px';
+    tile.style.top = origT + 'px';
+  }
+}
+
+function initS3DragTiles() {
+  $dragLayer.innerHTML = '';
+  TILE_LAYOUT.forEach(({ n, left, top }) => {
+    const d = document.createElement('div');
+    d.className = 's3-tile';
+    d.dataset.n = String(n);
+    d.style.left = left + 'px';
+    d.style.top = top + 'px';
+    const img = document.createElement('img');
+    img.src = tileImgSrc(n);
+    img.alt = String(n);
+    d.appendChild(img);
+    $dragLayer.appendChild(d);
+  });
+}
+
+function showS3DragLayer() {
+  $dragLayer.classList.add('active');
+  $dragLayer.setAttribute('aria-hidden', 'false');
+}
+
+function hideS3DragLayer() {
+  s3EndDragListeners();
+  s3DragState = {
+    tile: null,
+    pointerId: null,
+    offsetX: 0,
+    offsetY: 0,
+    origLeft: 0,
+    origTop: 0,
+  };
+  $dragLayer.classList.remove('active');
+  $dragLayer.innerHTML = '';
+  $dragLayer.setAttribute('aria-hidden', 'true');
+}
+
+function s3OnLayerPointerDown(e) {
+  if (player.phase !== 'seg2-drag') return;
+  const tile = e.target.closest('.s3-tile');
+  if (!tile || tile.classList.contains('placed')) return;
+  e.preventDefault();
+  /* Nếu tile đang trong vùng drop (đã snap nhưng chưa placed), ẩn OK */
+  if (s3PendingTile === tile) {
+    hideOkBtn();
+  }
+  tile.classList.add('dragging');
+  try {
+    tile.setPointerCapture(e.pointerId);
+  } catch (err) {}
+  const p = clientToWrap(e.clientX, e.clientY);
+  const tilePos = { left: parseFloat(tile.style.left), top: parseFloat(tile.style.top) };
+  s3DragState = {
+    tile,
+    pointerId: e.pointerId,
+    offsetX: p.x - tilePos.left,
+    offsetY: p.y - tilePos.top,
+    origLeft: tilePos.left,
+    origTop: tilePos.top,
+  };
+  document.addEventListener('pointermove', s3OnDocMove);
+  document.addEventListener('pointerup', s3OnDocUp);
+  document.addEventListener('pointercancel', s3OnDocUp);
+}
+
+$dragLayer.addEventListener('pointerdown', s3OnLayerPointerDown);
+
+const canvas = document.getElementById('main-canvas');
+const ctx    = canvas.getContext('2d');
+
+function setupCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = 590 * dpr;
+  canvas.height = 410 * dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+}
+setupCanvas();
+
+function cleanSvgText(svgText) {
+  return svgText
+    .replace(/<rect[^>]*fill="[^"]*"[^>]*>/gi, '')
+    .replace(/background:[^;"']+/gi, 'background:none');
+}
+
+/* ── UI ── */
+const $eggBtn  = document.getElementById('egg-btn');
+const $eggHint = document.getElementById('egg-hint');
+
+function showEgg() { $eggBtn.classList.add('visible'); $eggHint.classList.add('visible'); }
+function hideEgg() { $eggBtn.classList.remove('visible'); $eggHint.classList.remove('visible'); }
+
+function setCounter(n) {
+  const el = document.getElementById('frame-counter');
+  if (el) el.textContent = String(n);
+}
+function setDebugInfo(seg, frame, audioSec) {
+  const el = document.getElementById('debug-info');
+  if (el) el.textContent = `S${seg} F${frame} | ${audioSec.toFixed(2)}s`;
+}
+
+/* ── Two audio objects ── */
+const seg1Audio = new Audio(SEG1.audioFile);
+seg1Audio.preload = 'auto';
+
+const seg2Audio = new Audio(SEG2.audioFile);
+seg2Audio.preload = 'auto';
+
+const seg3Audio = new Audio(SEG3.audioFile);
+seg3Audio.preload = 'auto';
+
+/* ── Player ── */
+const player = {
+  currentSegment: 1,
+  currentFrame: 0,
+  isPlaying: false,
+  _rafId: null,
+  /*
+    phase:
+      'loading'     – đang tải
+      'seg1'        – seg1 audio-driven  F1→F234
+      'seg1-rest'   – seg1 RAF-driven    F235→F241
+      'waiting'      – chờ bấm trứng
+      'seg2'         – seg2 audio-driven  F1→F188
+      'seg2-drag'   – kéo thả số vào ô gỗ
+      'seg3'         – seg3 audio-driven  F189→F734
+      'complete'     – done
+  */
+  phase: 'loading',
+
+  _cache: {},
+  _loading: {},
+
+  _seg()  {
+    if (this.currentSegment === 1) return SEG1;
+    if (this.currentSegment === 2) return SEG2;
+    return SEG3;
+  },
+  _audio(){
+    if (this.currentSegment === 1) return seg1Audio;
+    if (this.currentSegment === 2) return seg2Audio;
+    return seg3Audio;
+  },
+
+  async _loadOne(frameNum) {
+    const seg = this._seg();
+    const key = seg.framesPath + frameNum;
+    if (this._cache[key]) return Promise.resolve(this._cache[key]);
+    if (this._loading[key]) return this._loading[key];
+    const p = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => { this._cache[key] = img; resolve(img); };
+      img.onerror = () => { this._cache[key] = null; resolve(null); };
+      fetch(seg.framesPath + frameNum + '.svg')
+        .then((r) => r.ok ? r.text() : Promise.reject())
+        .then((svgText) => {
+          const blob = new Blob([cleanSvgText(svgText)], { type: 'image/svg+xml' });
+          img.src = URL.createObjectURL(blob);
+        })
+        .catch(() => resolve(null));
+    });
+    this._loading[key] = p;
+    return p;
+  },
+
+  async _preloadRange(from, to) {
+    for (let i = from; i <= to; i += 16) {
+      const batch = [];
+      for (let j = i; j < i + 16 && j <= to; j++) batch.push(this._loadOne(j));
+      await Promise.all(batch);
+    }
+  },
+
+  async drawFrame(n) {
+    const target = n;
+    this.currentFrame = target;
+    const img = await this._loadOne(target);
+    if (this.currentFrame !== target) return;
+    if (!img) return;
+    ctx.clearRect(0, 0, 590, 410);
+    ctx.drawImage(img, 0, 0, 590, 410);
+    setCounter(n);
+    setDebugInfo(this.currentSegment, n, this._audio().currentTime);
+
+    const seg = this._seg();
+    if (n < seg.totalFrames) {
+      this._preloadRange(n + 1, Math.min(n + 48, seg.totalFrames));
+    }
+  },
+
+  stop() {
+    this.isPlaying = false;
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    seg1Audio.pause();
+    seg2Audio.pause();
+    seg3Audio.pause();
+    if (s3DragState.tile) {
+      s3DragState.tile.classList.remove('dragging');
+      s3DragState.tile.style.left = s3DragState.origLeft + 'px';
+      s3DragState.tile.style.top = s3DragState.origTop + 'px';
+    }
+    s3EndDragListeners();
+    s3DragState = {
+      tile: null,
+      pointerId: null,
+      offsetX: 0,
+      offsetY: 0,
+      origLeft: 0,
+      origTop: 0,
+    };
+    try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+  },
+
+  restart() {
+    this.stop();
+    hideS3DragLayer();
+    this.phase = 'loading';
+    this.currentSegment = 1;
+    hideEgg();
+    this.currentFrame = 0;
+    this._cache = {};
+    this._loading = {};
+    seg1Audio.currentTime = 0;
+    seg2Audio.currentTime = 0;
+    this.drawFrame(1);
+    requestAnimationFrame(() => { requestAnimationFrame(() => this._start()); });
+  },
+
+  goToFrame(n) {
+    if (this.phase === 'seg2-drag') {
+      hideS3DragLayer();
+      hideOkBtn();
+      this.phase = 'seg2';
+      this.currentSegment = 2;
+    }
+    this.stop();
+    /* Xác định segment dựa trên frame */
+    if (n >= 1 && n <= 241) {
+      this.currentSegment = 1;
+    } else if (n >= 242 && n <= 355) {
+      this.currentSegment = 2;
+    } else if (n >= 356) {
+      this.currentSegment = 3;
+    }
+    this.drawFrame(n);
+  },
+
+  /* ── Start seg1 ── */
+  _start() {
+    this.phase = 'seg1';
+    this.currentSegment = 1;
+    seg1Audio.currentTime = 0;
+    seg1Audio.play().catch(() => {});
+    /* Audio seg1 kết thúc ở frame 234, sau đó là seg1-rest F235→F241 */
+    this._doPlayAudioDriven(1, 234);
+  },
+
+  /* ── Audio-driven loop (seg1, seg2, seg3) ── */
+  _doPlayAudioDriven(from, to) {
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    try { parent.postMessage({ action: 'playing' }, '*'); } catch (e) {}
+
+    const audio = this._audio();
+    const fps = this._seg().fps;
+    let frame = from;
+
+    /* Sync audio về đúng vị trí của frame bắt đầu */
+    if (this.phase === 'seg3') {
+      audio.currentTime = (frame - 356) / fps;
+    } else {
+      audio.currentTime = frame / fps;
+    }
+    audio.play().catch(() => {});
+
+    const tick = () => {
+      if (!this.isPlaying) return;
+
+      if (audio.ended) { this._onAudioEnd(to); return; }
+
+      /* Tính frame mong đợi từ audio (để phát hiện lệch) */
+      let expectedFrame;
+      if (this.phase === 'seg3') {
+        expectedFrame = Math.round(audio.currentTime * fps) + 356;
+      } else {
+        expectedFrame = Math.round(audio.currentTime * fps);
+      }
+
+      /* Nếu audio chạy nhanh hơn frame → bỏ qua, chờ đủ fps */
+      if (expectedFrame > frame) {
+        frame = Math.min(expectedFrame, to);
+        if (frame !== this.currentFrame) this.drawFrame(frame);
+        if (frame >= to) { this._onAudioEnd(to); return; }
+      }
+
+      this._rafId = requestAnimationFrame(tick);
+    };
+
+    this._rafId = requestAnimationFrame(tick);
+  },
+
+  /* ── RAF-driven loop (seg1-rest 235→241) ── */
+  _doPlayRaf(from, to) {
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+
+    const tick = () => {
+      if (!this.isPlaying) return;
+      const nxt = this.currentFrame + 1;
+      if (nxt > to) { this._onAudioEnd(to); return; }
+      this.drawFrame(nxt);
+      this._rafId = requestAnimationFrame(tick);
+    };
+
+    this._rafId = requestAnimationFrame(tick);
+  },
+
+  /* ── Called when audio ends or RAF range finishes ── */
+  _onAudioEnd(to) {
+    this.isPlaying = false;
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+
+    /* seg1 audio ended (F234) → show egg */
+    if (this.phase === 'seg1' && to === 234) {
+      this.phase = 'waiting';
+      seg1Audio.pause();
+      showEgg();
+      try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+      return;
+    }
+
+    /* seg1-rest ended (F241) → start seg2 immediately */
+    if (this.phase === 'seg1-rest' && to === SEG1_REST_TO) {
+      this._startSegment2();
+      return;
+    }
+
+    /* seg2 audio ended (F188) → màn kéo thả, hiện button OK */
+    if (this.phase === 'seg2' && to === SEG2.totalFrames) {
+      this.phase = 'seg2-drag';
+      seg2Audio.pause();
+      hideEgg();
+      this.drawFrame(SEG2.totalFrames);
+      initS3DragTiles();
+      showS3DragLayer();
+      showOkBtn();
+      try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+    }
+
+    /* seg3 audio ended (F734) → complete */
+    if (this.phase === 'seg3' && to === SEG3.totalFrames) {
+      this.phase = 'complete';
+      seg3Audio.pause();
+      hideS3DragLayer();
+      hideOkBtn();
+      try {
+        parent.postMessage({ action: 'sessionComplete', session: 3 }, '*');
+      } catch (e) {}
+    }
+  },
+
+  /* ── Start segment 2: hide egg, play audio, sync frames ── */
+  _startSegment2() {
+    hideEgg();
+    this.currentSegment = 2;
+    this.phase = 'seg2';
+    seg2Audio.currentTime = 0;
+    seg2Audio.play().catch(() => {});
+    this._doPlayAudioDriven(1, SEG2.totalFrames);
+  },
+
+  /* ── Start segment 3: kéo thả đúng → chạy tiếp F356→F734 ── */
+  _startSegment3() {
+    this.currentSegment = 3;
+    this.phase = 'seg3';
+    seg3Audio.currentTime = 0;
+    seg3Audio.play().catch(() => {});
+    this._doPlayAudioDriven(356, SEG3.totalFrames);
+  },
+
+  /* ── Egg click handler ── */
+  resumeFromEgg() {
+    if (this.phase !== 'waiting') return;
+    hideEgg();
+    this.phase = 'seg1-rest';
+    this._doPlayRaf(235, SEG1_REST_TO);
+  },
+};
+
+/* ── Egg click ── */
+$eggBtn.addEventListener('click', () => {
+  if (player.phase === 'waiting') player.resumeFromEgg();
+});
+
+/* ── Message from parent (React shell) ── */
+window.addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d) return;
+  if (d.action === 'pause') {
+    seg1Audio.pause();
+    seg2Audio.pause();
+    seg3Audio.pause();
+    player.stop();
+  }
+  if (d.action === 'play') {
+    if (player.phase === 'complete') {
+      player.restart();
+    } else if (player.phase === 'waiting') {
+      player.resumeFromEgg();
+    } else if (!player.isPlaying) {
+      if (player.phase === 'seg2-drag') return;
+      if (player.phase === 'seg1') {
+        player._doPlayAudioDriven(player.currentFrame || 1, 234);
+      } else if (player.phase === 'seg1-rest') {
+        player._doPlayRaf(player.currentFrame || 235, SEG1_REST_TO);
+      } else if (player.phase === 'seg2') {
+        player._doPlayAudioDriven(player.currentFrame || 1, SEG2.totalFrames);
+      } else if (player.phase === 'seg3') {
+        player._doPlayAudioDriven(player.currentFrame || 189, SEG3.totalFrames);
+      }
+    }
+  }
+  if (d.action === 'restart') player.restart();
+  if (d.action === 'goToFrame') player.goToFrame(d.frame);
+  if (d.action === 'prevFrame') player.goToFrame(Math.max(player.currentFrame - 1, 1));
+  if (d.action === 'nextFrame') player.goToFrame(Math.min(player.currentFrame + 1, player._seg().totalFrames));
+});
+
+/* ── Load & Start ── */
+async function loadAndStart() {
+  const loadingEl = document.getElementById('s3-loading');
+  if (loadingEl) loadingEl.textContent = 'Đang tải…';
+
+  player.currentSegment = 1;
+  await player._loadOne(1);
+  player.drawFrame(1);
+
+  if (loadingEl) loadingEl.classList.add('hidden');
+  try { parent.postMessage({ action: 'framesLoaded' }, '*'); } catch (e) {}
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => player._start());
+  });
+}
+
+loadAndStart().catch((err) => console.error('session3 loadAndStart', err));
+</script>
+</body>
+</html>
