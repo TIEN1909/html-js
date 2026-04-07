@@ -3,8 +3,8 @@ export const BASE_PATH = import.meta.env.BASE_URL || '/';
 export const CHAPTERS = [
   { id: 1,  name: 'Numbers 1–10',   sub: 'Session 1',  url: `${BASE_PATH}session1/index.html`,  status: 'done'     },
   { id: 2,  name: 'Numbers 11–20',  sub: 'Session 2',  url: `${BASE_PATH}session2/index.html`,  status: 'done'     },
-  { id: 3,  name: 'Numbers 21–30',  sub: 'Session 3',  url: `${BASE_PATH}session3/index.html`,  status: 'current'  },
-  { id: 4,  name: 'Numbers 31–40',  sub: 'Session 4',  url: `${BASE_PATH}session4/index.html`,  status: 'locked'   },
+  { id: 3,  name: 'Numbers 21–30',  sub: 'Session 3',  url: `${BASE_PATH}session3/index.html`,  status: 'done'     },
+  { id: 4,  name: 'Numbers 31–40',  sub: 'Session 4',  url: `${BASE_PATH}session4/index.html`,  status: 'current'  },
   { id: 5,  name: 'Numbers 41–50',  sub: 'Session 5',  url: `${BASE_PATH}session5/index.html`,  status: 'locked'   },
   { id: 6,  name: 'Numbers 51–60',  sub: 'Session 6',  url: `${BASE_PATH}session6/index.html`,  status: 'locked'   },
   { id: 7,  name: 'Numbers 61–70',  sub: 'Session 7',  url: `${BASE_PATH}session7/index.html`,  status: 'locked'   },

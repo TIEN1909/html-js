@@ -188,6 +188,50 @@
     height: auto;
     pointer-events: none;
   }
+
+  /* Segment 3: HUD đồng bộ + vùng click cá ngựa (ước lượng %) */
+  #s3-seg3-hud {
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    z-index: 25;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 0 0 4px #000, 0 1px 2px #000;
+    pointer-events: none;
+    line-height: 1.35;
+    white-space: pre-line;
+    opacity: 0;
+  }
+  #s3-seg3-hud.visible { opacity: 1; }
+
+  #s3-seahorse-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    display: none;
+  }
+  #s3-seahorse-layer.active {
+    display: block;
+    pointer-events: auto;
+  }
+  .s3-seahorse-hit {
+    position: absolute;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    border: 1px dashed rgba(255, 140, 0, 0.5);
+    background: rgba(255, 200, 80, 0.1);
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .s3-seahorse-hit:disabled {
+    opacity: 0.22;
+    cursor: default;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -207,6 +251,9 @@
   <!-- Button OK xác nhận kéo thả số vào ô gỗ -->
   <button id="s3-ok-btn">OK</button>
 
+  <div id="s3-seg3-hud" aria-live="polite"></div>
+  <div id="s3-seahorse-layer" aria-hidden="true"></div>
+
   <div id="debug-info"></div>
 </div>
 
@@ -217,10 +264,14 @@
      F235→F241: RAF-driven, no audio
    SEGMENT 2 (frames 1–188 trong segment2/frames/, audio ends F188)
      F1→F188  : audio -1_10-230.mp3 (18.304s, FPS≈10.27)
-     F189→F734 : audio -1_239-734.mp3 (≈45s, FPS≈12.1)
+     F189→F734 : (cũ) đã thay bằng segment3 riêng sau OK kéo thả
+   SEGMENT 3 (segment3/): -1_10-389.mp3, frames 1–389
+     Part1: audio 0→13s ↔ F1→315; dừng
+     Click: 12 cá ngựa (không thứ tự), mỗi con 1 lần → sounds 60+61 … 82+83
+     Part2: audio 26s→hết ↔ F315→389
    ──────────────────────────────────────────────
    frames 1–241  : segment1/frames/
-   frames 242-734: segment2/frames/  (242 = F242)
+   frames 242–429: segment2/frames/  (242 = F242, seg2 dùng local 1–188)
 ══════════════════════════════════════════════ */
 const SEG1 = {
   framesPath   : 'segment1/frames/',
@@ -240,13 +291,95 @@ const SEG2 = {
 };
 SEG2.fps = SEG2.totalFrames / SEG2.audioDuration;
 
+/** Segment 3: thư mục segment3/; audioDuration cập nhật khi loadedmetadata */
 const SEG3 = {
-  framesPath   : 'segment2/frames/',
-  audioFile     : 'segment2/sounds/-1_239-734.mp3',
-  totalFrames   : 734,           // frames 189→734 trong seg2/frames/
-  audioDuration : 45.0,
+  framesPath    : 'segment3/frames/',
+  audioFile     : 'segment3/sounds/-1_10-389.mp3',
+  soundsPath    : 'segment3/sounds/',
+  totalFrames   : 389,
+  part1EndTime  : 13,
+  resumeTime    : 26,
+  pauseFrame    : 315,
+  part2EndFrame : 389,
+  audioDuration : 40,
 };
-SEG3.fps = (SEG3.totalFrames - 188) / SEG3.audioDuration;
+
+/** Part1: t giây [0, part1EndTime] → frame 1..pauseFrame (đồng bộ với audio) */
+function seg3Part1Frame(t) {
+  const te = SEG3.part1EndTime;
+  const maxF = SEG3.pauseFrame;
+  if (te <= 0) return 1;
+  return Math.min(maxF, Math.max(1, Math.round(1 + (t / te) * (maxF - 1))));
+}
+
+/**
+ * Part2: t, duration (giây) — map [resumeTime, duration] → pauseFrame..part2EndFrame
+ * Input: t = currentTime; duration = độ dài file MP3.
+ */
+function seg3Part2Frame(t, duration) {
+  const t0 = SEG3.resumeTime;
+  const span = duration - t0;
+  const f0 = SEG3.pauseFrame;
+  const f1 = SEG3.part2EndFrame;
+  if (span <= 0.0001) return f1;
+  const prog = Math.min(1, Math.max(0, (t - t0) / span));
+  return Math.min(f1, Math.max(f0, Math.round(f0 + prog * (f1 - f0))));
+}
+
+/** 12 vùng click cá ngựa — % trong khung canvas (ước lượng, chỉnh sau) */
+const SEAHORSE_BOXES_PCT = [
+  { l: 2, t: 26, w: 9, h: 14 },
+  { l: 11, t: 18, w: 9, h: 14 },
+  { l: 6, t: 40, w: 9, h: 14 },
+  { l: 18, t: 34, w: 9, h: 14 },
+  { l: 28, t: 22, w: 9, h: 14 },
+  { l: 24, t: 44, w: 9, h: 14 },
+  { l: 34, t: 36, w: 9, h: 14 },
+  { l: 4, t: 55, w: 9, h: 14 },
+  { l: 16, t: 52, w: 9, h: 14 },
+  { l: 30, t: 52, w: 9, h: 14 },
+  { l: 38, t: 26, w: 9, h: 14 },
+  { l: 22, t: 12, w: 9, h: 14 },
+];
+
+function hideS3SeahorseLayer() {
+  const el = document.getElementById('s3-seahorse-layer');
+  if (el) {
+    el.classList.remove('active');
+    el.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function showS3SeahorseLayer() {
+  const el = document.getElementById('s3-seahorse-layer');
+  if (el) {
+    el.classList.add('active');
+    el.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function resetS3SeahorseButtons() {
+  document.querySelectorAll('#s3-seahorse-layer .s3-seahorse-hit').forEach((b) => {
+    b.disabled = false;
+  });
+}
+
+(function buildS3SeahorseLayer() {
+  const layer = document.getElementById('s3-seahorse-layer');
+  if (!layer || layer.children.length) return;
+  SEAHORSE_BOXES_PCT.forEach((b, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 's3-seahorse-hit';
+    btn.dataset.idx = String(i);
+    btn.style.left = b.l + '%';
+    btn.style.top = b.t + '%';
+    btn.style.width = b.w + '%';
+    btn.style.height = b.h + '%';
+    btn.setAttribute('aria-label', 'Cá ngựa ' + (i + 1));
+    layer.appendChild(btn);
+  });
+})();
 
 /** Ảnh số 1–5.svg (đặt vào public/images hoặc dùng sẵn segment2/images) */
 function tileImgSrc(n) {
@@ -509,6 +642,11 @@ seg2Audio.preload = 'auto';
 
 const seg3Audio = new Audio(SEG3.audioFile);
 seg3Audio.preload = 'auto';
+seg3Audio.addEventListener('loadedmetadata', () => {
+  if (seg3Audio.duration && Number.isFinite(seg3Audio.duration)) {
+    SEG3.audioDuration = seg3Audio.duration;
+  }
+});
 
 /* ── Player ── */
 const player = {
@@ -516,6 +654,12 @@ const player = {
   currentFrame: 0,
   isPlaying: false,
   _rafId: null,
+  /** seg3: 'part1' | 'clicks' | 'part2' — chỉ dùng khi phase === 'seg3' */
+  seg3SubPhase: 'part1',
+  _seg3ActiveClickAudio: null,
+  _seg3ClickBusy: false,
+  seg3HorseDone: [],
+  seg3ClickCount: 0,
   /*
     phase:
       'loading'     – đang tải
@@ -524,7 +668,7 @@ const player = {
       'waiting'      – chờ bấm trứng
       'seg2'         – seg2 audio-driven  F1→F188
       'seg2-drag'   – kéo thả số vào ô gỗ
-      'seg3'         – seg3 audio-driven  F189→F734
+      'seg3'         – segment3/: part1 → clicks → part2 (F1–389)
       'complete'     – done
   */
   phase: 'loading',
@@ -587,11 +731,171 @@ const player = {
     if (n < seg.totalFrames) {
       this._preloadRange(n + 1, Math.min(n + 48, seg.totalFrames));
     }
+    if (this.phase === 'seg3') this._seg3UpdateHud();
+  },
+
+  /** HUD: frame + thời gian audio (part1/part2) hoặc x/12 (clicks) */
+  _seg3UpdateHud() {
+    const el = document.getElementById('s3-seg3-hud');
+    if (!el) return;
+    if (this.phase !== 'seg3') {
+      el.classList.remove('visible');
+      el.textContent = '';
+      return;
+    }
+    el.classList.add('visible');
+    const f = this.currentFrame;
+    const t = seg3Audio.currentTime;
+    if (this.seg3SubPhase === 'part1') {
+      el.textContent = 'F' + f + ' | ' + t.toFixed(2) + 's (part1: 0–13s→F315)';
+    } else if (this.seg3SubPhase === 'clicks') {
+      el.textContent = 'F' + f + ' | ' + t.toFixed(2) + 's\nĐã click: ' + this.seg3ClickCount + '/12';
+    } else {
+      el.textContent = 'F' + f + ' | ' + t.toFixed(2) + 's (part2: 26s→hết→F389)';
+    }
+  },
+
+  _seg3PlayOneClip(src) {
+    return new Promise((resolve) => {
+      const au = new Audio(src);
+      this._seg3ActiveClickAudio = au;
+      const fin = () => {
+        if (this._seg3ActiveClickAudio === au) this._seg3ActiveClickAudio = null;
+        resolve();
+      };
+      au.addEventListener('ended', fin, { once: true });
+      au.addEventListener('error', fin, { once: true });
+      au.play().catch(fin);
+    });
+  },
+
+  /** clickIndex 1..12 → 60+61, 62+63, … 82+83 */
+  async _seg3PlayClickPair(clickIndex) {
+    const base = 58 + 2 * clickIndex;
+    await this._seg3PlayOneClip(SEG3.soundsPath + base + '.mp3');
+    await this._seg3PlayOneClip(SEG3.soundsPath + (base + 1) + '.mp3');
+  },
+
+  async _seg3OnHorseClick(idx) {
+    if (this.phase !== 'seg3' || this.seg3SubPhase !== 'clicks') return;
+    if (!this.seg3HorseDone || this.seg3HorseDone[idx]) return;
+    if (this._seg3ClickBusy) return;
+    this._seg3ClickBusy = true;
+    this.seg3HorseDone[idx] = true;
+    this.seg3ClickCount += 1;
+    const btn = document.querySelector('#s3-seahorse-layer [data-idx="' + idx + '"]');
+    if (btn) btn.disabled = true;
+    this._seg3UpdateHud();
+    try {
+      await this._seg3PlayClickPair(this.seg3ClickCount);
+    } catch (e) {}
+    this._seg3ClickBusy = false;
+    this._seg3UpdateHud();
+    if (this.seg3ClickCount >= 12) {
+      hideS3SeahorseLayer();
+      this._seg3StartPart2();
+    }
+  },
+
+  _seg3EndPart1Pause() {
+    this.isPlaying = false;
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+    seg3Audio.pause();
+    this.drawFrame(SEG3.pauseFrame);
+    this.seg3SubPhase = 'clicks';
+    resetS3SeahorseButtons();
+    showS3SeahorseLayer();
+    this._seg3UpdateHud();
+    try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+  },
+
+  _seg3Part1Tick() {
+    if (!this.isPlaying || this.phase !== 'seg3' || this.seg3SubPhase !== 'part1') return;
+    this._rafId = null;
+    const a = seg3Audio;
+    const endT = SEG3.part1EndTime;
+
+    if (a.ended) {
+      this._seg3EndPart1Pause();
+      return;
+    }
+
+    const t = a.currentTime;
+    if (t >= endT) {
+      a.pause();
+      a.currentTime = endT;
+      this._seg3EndPart1Pause();
+      return;
+    }
+
+    const frame = seg3Part1Frame(t);
+    if (frame !== this.currentFrame) this.drawFrame(frame);
+    else this._seg3UpdateHud();
+
+    this._rafId = requestAnimationFrame(() => this._seg3Part1Tick());
+  },
+
+  _seg3StartPart2() {
+    this.seg3SubPhase = 'part2';
+    seg3Audio.currentTime = SEG3.resumeTime;
+    this.isPlaying = true;
+    try { parent.postMessage({ action: 'playing' }, '*'); } catch (e) {}
+    seg3Audio.play().catch(() => {});
+    this._seg3Part2Tick();
+  },
+
+  _seg3Part2Tick() {
+    if (!this.isPlaying || this.phase !== 'seg3' || this.seg3SubPhase !== 'part2') return;
+    this._rafId = null;
+    const a = seg3Audio;
+    const dur = a.duration && Number.isFinite(a.duration) ? a.duration : SEG3.audioDuration;
+
+    if (a.ended || a.currentTime >= dur - 0.05) {
+      this.drawFrame(SEG3.part2EndFrame);
+      this._seg3OnComplete();
+      return;
+    }
+
+    const t = a.currentTime;
+    const frame = seg3Part2Frame(t, dur);
+    if (frame !== this.currentFrame) this.drawFrame(frame);
+    else this._seg3UpdateHud();
+
+    this._rafId = requestAnimationFrame(() => this._seg3Part2Tick());
+  },
+
+  _seg3OnComplete() {
+    this.isPlaying = false;
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+    seg3Audio.pause();
+    this.phase = 'complete';
+    hideS3DragLayer();
+    hideOkBtn();
+    hideS3SeahorseLayer();
+    const el = document.getElementById('s3-seg3-hud');
+    if (el) {
+      el.classList.remove('visible');
+      el.textContent = '';
+    }
+    try {
+      parent.postMessage({ action: 'sessionComplete', session: 3 }, '*');
+    } catch (e) {}
   },
 
   stop() {
     this.isPlaying = false;
     if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    if (this._seg3ActiveClickAudio) {
+      try { this._seg3ActiveClickAudio.pause(); } catch (e) {}
+      this._seg3ActiveClickAudio = null;
+    }
+    this._seg3ClickBusy = false;
     seg1Audio.pause();
     seg2Audio.pause();
     seg3Audio.pause();
@@ -623,6 +927,17 @@ const player = {
     this._loading = {};
     seg1Audio.currentTime = 0;
     seg2Audio.currentTime = 0;
+    seg3Audio.currentTime = 0;
+    hideS3SeahorseLayer();
+    resetS3SeahorseButtons();
+    this.seg3SubPhase = 'part1';
+    this.seg3HorseDone = [];
+    this.seg3ClickCount = 0;
+    const hud = document.getElementById('s3-seg3-hud');
+    if (hud) {
+      hud.classList.remove('visible');
+      hud.textContent = '';
+    }
     this.drawFrame(1);
     requestAnimationFrame(() => { requestAnimationFrame(() => this._start()); });
   },
@@ -642,6 +957,7 @@ const player = {
       this.currentSegment = 2;
     } else if (n >= 356) {
       this.currentSegment = 3;
+      n = Math.min(SEG3.totalFrames, Math.max(1, n - 355));
     }
     this.drawFrame(n);
   },
@@ -656,9 +972,10 @@ const player = {
     this._doPlayAudioDriven(1, 234);
   },
 
-  /* ── Audio-driven loop (seg1, seg2, seg3) ── */
+  /* ── Audio-driven loop (seg1, seg2) ── */
   _doPlayAudioDriven(from, to) {
     if (this.isPlaying) return;
+    if (this.phase === 'seg3') return;
     this.isPlaying = true;
     try { parent.postMessage({ action: 'playing' }, '*'); } catch (e) {}
 
@@ -666,12 +983,7 @@ const player = {
     const fps = this._seg().fps;
     let frame = from;
 
-    /* Sync audio về đúng vị trí của frame bắt đầu */
-    if (this.phase === 'seg3') {
-      audio.currentTime = (frame - 356) / fps;
-    } else {
-      audio.currentTime = frame / fps;
-    }
+    audio.currentTime = frame / fps;
     audio.play().catch(() => {});
 
     const tick = () => {
@@ -679,13 +991,7 @@ const player = {
 
       if (audio.ended) { this._onAudioEnd(to); return; }
 
-      /* Tính frame mong đợi từ audio (để phát hiện lệch) */
-      let expectedFrame;
-      if (this.phase === 'seg3') {
-        expectedFrame = Math.round(audio.currentTime * fps) + 356;
-      } else {
-        expectedFrame = Math.round(audio.currentTime * fps);
-      }
+      const expectedFrame = Math.round(audio.currentTime * fps);
 
       /* Nếu audio chạy nhanh hơn frame → bỏ qua, chờ đủ fps */
       if (expectedFrame > frame) {
@@ -748,16 +1054,6 @@ const player = {
       try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
     }
 
-    /* seg3 audio ended (F734) → complete */
-    if (this.phase === 'seg3' && to === SEG3.totalFrames) {
-      this.phase = 'complete';
-      seg3Audio.pause();
-      hideS3DragLayer();
-      hideOkBtn();
-      try {
-        parent.postMessage({ action: 'sessionComplete', session: 3 }, '*');
-      } catch (e) {}
-    }
   },
 
   /* ── Start segment 2: hide egg, play audio, sync frames ── */
@@ -770,13 +1066,25 @@ const player = {
     this._doPlayAudioDriven(1, SEG2.totalFrames);
   },
 
-  /* ── Start segment 3: kéo thả đúng → chạy tiếp F356→F734 ── */
+  /* ── Segment 3 (segment3/): part1 → 12 click → part2 ── */
   _startSegment3() {
+    hideOkBtn();
+    hideS3DragLayer();
     this.currentSegment = 3;
     this.phase = 'seg3';
+    this.seg3SubPhase = 'part1';
+    this.seg3HorseDone = new Array(12).fill(false);
+    this.seg3ClickCount = 0;
+    this._seg3ClickBusy = false;
+    this._seg3ActiveClickAudio = null;
+    hideS3SeahorseLayer();
+    resetS3SeahorseButtons();
     seg3Audio.currentTime = 0;
+    this.isPlaying = true;
+    try { parent.postMessage({ action: 'playing' }, '*'); } catch (e) {}
     seg3Audio.play().catch(() => {});
-    this._doPlayAudioDriven(356, SEG3.totalFrames);
+    this.drawFrame(1);
+    this._seg3Part1Tick();
   },
 
   /* ── Egg click handler ── */
@@ -787,6 +1095,18 @@ const player = {
     this._doPlayRaf(235, SEG1_REST_TO);
   },
 };
+
+(function bindS3SeahorseClicks() {
+  const layer = document.getElementById('s3-seahorse-layer');
+  if (!layer) return;
+  layer.addEventListener('pointerdown', (e) => {
+    const hit = e.target.closest('.s3-seahorse-hit');
+    if (!hit || hit.disabled) return;
+    e.preventDefault();
+    const idx = parseInt(hit.dataset.idx, 10);
+    if (Number.isFinite(idx)) player._seg3OnHorseClick(idx);
+  });
+})();
 
 /* ── Egg click ── */
 $eggBtn.addEventListener('click', () => {
@@ -817,7 +1137,12 @@ window.addEventListener('message', (e) => {
       } else if (player.phase === 'seg2') {
         player._doPlayAudioDriven(player.currentFrame || 1, SEG2.totalFrames);
       } else if (player.phase === 'seg3') {
-        player._doPlayAudioDriven(player.currentFrame || 189, SEG3.totalFrames);
+        if (player.seg3SubPhase === 'clicks') return;
+        player.isPlaying = true;
+        try { parent.postMessage({ action: 'playing' }, '*'); } catch (err) {}
+        seg3Audio.play().catch(() => {});
+        if (player.seg3SubPhase === 'part1') player._seg3Part1Tick();
+        else if (player.seg3SubPhase === 'part2') player._seg3Part2Tick();
       }
     }
   }

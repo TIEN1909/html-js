@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 4</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #canvas-wrap {
+    width: 590px;
+    height: 410px;
+    position: relative;
+    transform: scale(1.4);
+    transform-origin: center center;
+  }
+  #main-canvas {
+    display: block;
+    width: 590px;
+    height: 410px;
+  }
+
+  #frame-counter {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    z-index: 5;
+    pointer-events: none;
+    text-shadow: 0 0 4px #000;
+  }
+
+  #s4-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    z-index: 10;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+  }
+  #s4-loading.hidden { display: none; }
+
+  /* HUD đồng bộ + số đã điền */
+  #s4-hud {
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    z-index: 25;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 0 0 4px #000, 0 1px 2px #000;
+    pointer-events: none;
+    line-height: 1.35;
+    white-space: pre-line;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  #s4-hud.visible { opacity: 1; }
+
+  /* Kéo thả số (sau audio part1) */
+  #s4-dnd-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 18;
+    pointer-events: none;
+    touch-action: none;
+  }
+  #s4-dnd-layer.active {
+    pointer-events: auto;
+  }
+  .s4-tile {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
+    transition: opacity 0.2s, filter 0.2s;
+    z-index: 1;
+  }
+  .s4-tile.dragging {
+    cursor: grabbing;
+    z-index: 50;
+    transition: none;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6));
+  }
+  .s4-tile.placed {
+    cursor: default;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .s4-tile.correct {
+    filter: drop-shadow(0 0 10px rgba(80,200,80,0.8)) drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  }
+  .s4-tile img {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+
+  /* 2 ô điền số (slot) — tỷ lệ % trong canvas 590×410 */
+  #s4-slots {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  #s4-slots.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .s4-slot {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 22px;
+    font-weight: bold;
+    color: rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.08);
+    border: 2px dashed rgba(255,255,255,0.25);
+    border-radius: 8px;
+  }
+  #s4-slot-left   { left: 24%; top: 36%; width: 9%; height: 14%; }
+  #s4-slot-right  { left: 67%; top: 36%; width: 9%; height: 14%; }
+  .s4-slot.filled {
+    background: rgba(80,200,80,0.15);
+    border: 2px solid rgba(80,200,80,0.6);
+    color: #90ee90;
+    text-shadow: 0 0 8px rgba(80,200,80,0.7);
+    font-size: 28px;
+  }
+
+  /* Button OK */
+  #s4-ok-btn {
+    position: absolute;
+    left: 50%;
+    bottom: 8%;
+    transform: translateX(-50%);
+    width: 72px;
+    height: 36px;
+    cursor: pointer;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.15s;
+    background: linear-gradient(135deg, #56c45a, #3fa03a);
+    border: 2px solid #2d8028;
+    border-radius: 9px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  #s4-ok-btn.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #s4-ok-btn:hover {
+    transform: translateX(-50%) scale(1.1);
+    filter: brightness(1.1);
+  }
+  #s4-ok-btn:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  #debug-info { display: none; }
+</style>
+</head>
+<body>
+<div id="canvas-wrap">
+  <div id="s4-loading">Đang tải…</div>
+  <canvas id="main-canvas" width="590" height="410"></canvas>
+
+  <!-- HUD đồng bộ -->
+  <div id="s4-hud" aria-live="polite"></div>
+
+  <!-- 2 ô điền số -->
+  <div id="s4-slots">
+    <div id="s4-slot-left" class="s4-slot" data-slot="left"></div>
+    <div id="s4-slot-right" class="s4-slot" data-slot="right"></div>
+  </div>
+
+  <!-- Kéo thả: tiles đè lên canvas -->
+  <div id="s4-dnd-layer" aria-hidden="true"></div>
+
+  <!-- OK -->
+  <button id="s4-ok-btn">OK</button>
+
+  <div id="debug-info"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   SESSION 4 — frames/segments trong segement1/
+   ──────────────────────────────────────────────
+   Frames: 1 → 758 (.svg trong segement1/frames/)
+   Images: 1 → 10 (.svg trong segement1/images/)
+
+   Part1 (F1→F433):
+     Audio A: segement1/sounds/-1_11-272.mp3  (frame 1..272  trong audio)
+     Audio B: segement1/sounds/-1_278-443.mp3 (frame 273..433 trong audio)
+     A kết thúc → tự động nối B (canPlay = 's4-a' / 's4-b')
+     Audio B kết thúc → pause, hiện drag & drop
+
+   Drag & Drop (pause at F433):
+     10 số 1..10, images trong segement1/images/
+     Ô trái  (left)  = cần số 10
+     Ô phải  (right) = cần số  3
+     Kéo đúng vào ô → tile snap + hiện số trong slot
+     Đủ 2 ô đúng → hiện OK
+     Bấm OK → ẩn drag & drop → Part2
+
+   Part2 (F505→F758):
+     Audio: segement1/sounds/-1_460-758.mp3
+     Sync:  F505→F758  ↔  0→hết audio
+══════════════════════════════════════════════ */
+
+/* ── Constants ── */
+const S4 = {
+  framesPath     : 'segement1/frames/',
+  imagesPath     : 'segement1/images/',
+  soundsPath     : 'segement1/sounds/',
+  totalFrames    : 758,
+  part1EndFrame  : 433,
+  part2StartFrame: 505,
+  part2EndFrame  : 758,
+  slotLeft       : 10,   // số cần điền vào ô trái
+  slotRight      : 3,    // số cần điền vào ô phải
+  /** placeholder FPS — cập nhật khi audio loadedmetadata */
+  fps            : 12,
+  audioDurA      : 23.0,
+  audioDurB      : 14.0,
+  audioDurC      : 25.0,
+};
+
+const S4_AUDIO = [
+  { src: 'segement1/sounds/-1_11-272.mp3',  dur: 23.0 },
+  { src: 'segement1/sounds/-1_278-443.mp3', dur: 14.0 },
+  { src: 'segement1/sounds/-1_460-758.mp3', dur: 25.0 },
+];
+S4.fps = (S4.part2EndFrame - S4.part2StartFrame + 1) / S4_AUDIO[2].dur;
+
+/* ── Canvas ── */
+const canvas = document.getElementById('main-canvas');
+const ctx    = canvas.getContext('2d');
+
+function setupCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = 590 * dpr;
+  canvas.height = 410 * dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+}
+setupCanvas();
+
+function cleanSvgText(svg) {
+  return svg
+    .replace(/<rect[^>]*fill="[^"]*"[^>]*>/gi, '')
+    .replace(/background:[^;"']+/gi, 'background:none');
+}
+
+/* ── Audio instances ── */
+const s4audios = S4_AUDIO.map(a => {
+  const au = new Audio(a.src);
+  au.preload = 'auto';
+  return au;
+});
+
+s4audios[0].addEventListener('loadedmetadata', () => {
+  if (isFinite(s4audios[0].duration)) S4.audioDurA = s4audios[0].duration;
+});
+s4audios[1].addEventListener('loadedmetadata', () => {
+  if (isFinite(s4audios[1].duration)) S4.audioDurB = s4audios[1].duration;
+});
+s4audios[2].addEventListener('loadedmetadata', () => {
+  if (isFinite(s4audios[2].duration)) {
+    S4.audioDurC = s4audios[2].duration;
+    S4.fps = (S4.part2EndFrame - S4.part2StartFrame + 1) / S4.audioDurC;
+  }
+});
+
+/* ── UI helpers ── */
+const $hud    = document.getElementById('s4-hud');
+const $okBtn  = document.getElementById('s4-ok-btn');
+const $slots  = document.getElementById('s4-slots');
+const $dnd    = document.getElementById('s4-dnd-layer');
+
+function showHUD(text) {
+  $hud.textContent = text;
+  $hud.classList.add('visible');
+}
+function hideHUD() {
+  $hud.classList.remove('visible');
+  $hud.textContent = '';
+}
+function showOkBtn() { $okBtn.classList.add('visible'); }
+function hideOkBtn() { $okBtn.classList.remove('visible'); }
+function showSlots() { $slots.classList.add('active'); }
+function hideSlots() { $slots.classList.remove('active'); }
+function setCounter(n) {
+  const el = document.getElementById('frame-counter');
+  if (el) el.textContent = String(n);
+}
+
+/* ── Drag & Drop state ── */
+const dndState = {
+  tile: null,
+  pointerId: null,
+  offsetX: 0,
+  offsetY: 0,
+  origLeft: 0,
+  origTop: 0,
+  placed: {},   // { left: number|null, right: number|null }
+};
+
+function tileNum(tile) { return parseInt(tile.dataset.n, 10); }
+
+function clientToWrap(cx, cy) {
+  const r = document.getElementById('canvas-wrap').getBoundingClientRect();
+  return {
+    x: ((cx - r.left) / r.width)  * 590,
+    y: ((cy - r.top)  / r.height) * 410,
+  };
+}
+
+function endDragListeners() {
+  document.removeEventListener('pointermove', onDocMove);
+  document.removeEventListener('pointerup',   onDocUp);
+  document.removeEventListener('pointercancel', onDocUp);
+}
+
+/* ── Vị trí tile ban đầu (random / ước lượng) ── */
+const TILE_START_PX = [
+  { n: 1,  left: 82,  top: 60  },
+  { n: 2,  left: 205, top: 52  },
+  { n: 3,  left: 340, top: 62  },
+  { n: 4,  left: 455, top: 50  },
+  { n: 5,  left: 78,  top: 160 },
+  { n: 6,  left: 210, top: 170 },
+  { n: 7,  left: 340, top: 158 },
+  { n: 8,  left: 455, top: 165 },
+  { n: 9,  left: 155, top: 268 },
+  { n: 10, left: 385, top: 262 },
+];
+
+/** Vùng slot (%, chuyển sang px khi tính toán) */
+const SLOT_PX = {
+  left:  { x: Math.round(0.24 * 590), y: Math.round(0.36 * 410), w: Math.round(0.09 * 590), h: Math.round(0.14 * 410) },
+  right: { x: Math.round(0.67 * 590), y: Math.round(0.36 * 410), w: Math.round(0.09 * 590), h: Math.round(0.14 * 410) },
+};
+const SLOT_SLOP = 10;
+
+function pointInSlot(px, py, slot) {
+  const { x, y, w, h } = slot;
+  return px >= x - SLOT_SLOP && px <= x + w + SLOT_SLOP
+      && py >= y - SLOT_SLOP && py <= y + h + SLOT_SLOP;
+}
+
+function fillSlot(slotId, num) {
+  const el = document.getElementById('s4-slot-' + slotId);
+  if (!el) return;
+  el.textContent = String(num);
+  el.classList.add('filled');
+}
+
+function clearSlots() {
+  ['left', 'right'].forEach(id => {
+    const el = document.getElementById('s4-slot-' + id);
+    if (el) { el.textContent = ''; el.classList.remove('filled'); }
+  });
+}
+
+function buildTiles() {
+  $dnd.innerHTML = '';
+  TILE_START_PX.forEach(({ n, left, top }) => {
+    const d = document.createElement('div');
+    d.className = 's4-tile';
+    d.dataset.n = String(n);
+    d.style.left = left + 'px';
+    d.style.top  = top  + 'px';
+    const img = document.createElement('img');
+    img.src = S4.imagesPath + n + '.svg';
+    img.alt = String(n);
+    d.appendChild(img);
+    $dnd.appendChild(d);
+  });
+}
+
+function showDndLayer() {
+  buildTiles();
+  $dnd.classList.add('active');
+  $dnd.setAttribute('aria-hidden', 'false');
+}
+
+function hideDndLayer() {
+  endDragListeners();
+  dndState.tile = null;
+  dndState.pointerId = null;
+  $dnd.classList.remove('active');
+  $dnd.setAttribute('aria-hidden', 'true');
+  $dnd.innerHTML = '';
+}
+
+/* ── Pointer events cho tiles ── */
+$dnd.addEventListener('pointerdown', (e) => {
+  if (player.phase !== 's4-dnd') return;
+  const tile = e.target.closest('.s4-tile');
+  if (!tile || tile.classList.contains('placed')) return;
+  e.preventDefault();
+  try { tile.setPointerCapture(e.pointerId); } catch (err) {}
+
+  const pos = clientToWrap(e.clientX, e.clientY);
+  const left = parseFloat(tile.style.left);
+  const top  = parseFloat(tile.style.top);
+  dndState.tile = tile;
+  dndState.pointerId = e.pointerId;
+  dndState.offsetX = pos.x - left;
+  dndState.offsetY = pos.y - top;
+  dndState.origLeft = left;
+  dndState.origTop  = top;
+  tile.classList.add('dragging');
+  document.addEventListener('pointermove', onDocMove);
+  document.addEventListener('pointerup',   onDocUp);
+  document.addEventListener('pointercancel', onDocUp);
+});
+
+function onDocMove(e) {
+  if (!dndState.tile || dndState.pointerId !== e.pointerId) return;
+  const p = clientToWrap(e.clientX, e.clientY);
+  dndState.tile.style.left = p.x - dndState.offsetX + 'px';
+  dndState.tile.style.top  = p.y - dndState.offsetY + 'px';
+}
+
+function onDocUp(e) {
+  if (!dndState.tile || dndState.pointerId !== e.pointerId) return;
+  endDragListeners();
+  const tile = dndState.tile;
+  tile.classList.remove('dragging');
+  try { tile.releasePointerCapture(e.pointerId); } catch (err) {}
+
+  const n = tileNum(tile);
+  const w = tile.offsetWidth  || 44;
+  const h = tile.offsetHeight || 44;
+  const cx = parseFloat(tile.style.left) + w / 2;
+  const cy = parseFloat(tile.style.top)  + h / 2;
+
+  let placed = false;
+
+  /* Kiểm tra ô trái */
+  if (pointInSlot(cx, cy, SLOT_PX.left) && dndState.placed.left === null && n === S4.slotLeft) {
+    snapTile(tile, SLOT_PX.left, w, h);
+    tile.classList.add('placed', 'correct');
+    dndState.placed.left = n;
+    fillSlot('left', n);
+    placed = true;
+  }
+  /* Kiểm tra ô phải */
+  else if (pointInSlot(cx, cy, SLOT_PX.right) && dndState.placed.right === null && n === S4.slotRight) {
+    snapTile(tile, SLOT_PX.right, w, h);
+    tile.classList.add('placed', 'correct');
+    dndState.placed.right = n;
+    fillSlot('right', n);
+    placed = true;
+  }
+
+  if (!placed) {
+    /* Không đúng slot hoặc sai số → về vị trí cũ */
+    tile.style.left = dndState.origLeft + 'px';
+    tile.style.top  = dndState.origTop  + 'px';
+  }
+
+  dndState.tile = null;
+  dndState.pointerId = null;
+
+  /* Đủ 2 ô đúng → hiện OK */
+  if (dndState.placed.left === S4.slotLeft && dndState.placed.right === S4.slotRight) {
+    showOkBtn();
+    showHUD('Đã điền đúng! Bấm OK để tiếp tục');
+  }
+}
+
+function snapTile(tile, slot, w, h) {
+  tile.style.left = (slot.x + (slot.w - w) / 2) + 'px';
+  tile.style.top  = (slot.y + (slot.h - h) / 2) + 'px';
+}
+
+/* ── OK button ── */
+$okBtn.addEventListener('click', () => {
+  if (player.phase !== 's4-dnd') return;
+  if (dndState.placed.left !== S4.slotLeft || dndState.placed.right !== S4.slotRight) return;
+  player._startPart2();
+});
+
+/* ── Player ── */
+const player = {
+  phase: 'loading',
+  currentFrame: 0,
+  isPlaying: false,
+  _rafId: null,
+  _cache: {},
+  _loading: {},
+
+  async _loadOne(frameNum) {
+    const key = S4.framesPath + frameNum;
+    if (this._cache[key]) return Promise.resolve(this._cache[key]);
+    if (this._loading[key]) return this._loading[key];
+    const p = new Promise((res) => {
+      const img = new Image();
+      img.onload  = () => { this._cache[key] = img; res(img); };
+      img.onerror = () => { this._cache[key] = null; res(null); };
+      fetch(S4.framesPath + frameNum + '.svg')
+        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(svgText => {
+          const blob = new Blob([cleanSvgText(svgText)], { type: 'image/svg+xml' });
+          img.src = URL.createObjectURL(blob);
+        })
+        .catch(() => res(null));
+    });
+    this._loading[key] = p;
+    return p;
+  },
+
+  async _preloadRange(from, to) {
+    for (let i = from; i <= to; i += 16) {
+      const batch = [];
+      for (let j = i; j < i + 16 && j <= to; j++) batch.push(this._loadOne(j));
+      await Promise.all(batch);
+    }
+  },
+
+  async drawFrame(n) {
+    const target = n;
+    this.currentFrame = target;
+    const img = await this._loadOne(target);
+    if (this.currentFrame !== target) return;
+    if (!img) return;
+    ctx.clearRect(0, 0, 590, 410);
+    ctx.drawImage(img, 0, 0, 590, 410);
+    setCounter(n);
+    this._updateHud();
+    if (n < S4.totalFrames) {
+      this._preloadRange(n + 1, Math.min(n + 48, S4.totalFrames));
+    }
+  },
+
+  _updateHud() {
+    if (this.phase === 'loading') { hideHUD(); return; }
+    const f = this.currentFrame;
+    const a = s4audios;
+    if (this.phase === 's4-part1') {
+      let t = 0;
+      if (this._audioIdx === 0) t = a[0].currentTime;
+      else if (this._audioIdx === 1) t = S4.audioDurA + a[1].currentTime;
+      showHUD('F' + f + '/' + S4.part1EndFrame + ' | ' + t.toFixed(2) + 's (A→B)');
+    } else if (this.phase === 's4-dnd') {
+      showHUD('F' + f + ' (đang chờ điền số)');
+    } else if (this.phase === 's4-part2') {
+      showHUD('F' + f + '/F' + S4.part2EndFrame + ' | ' + a[2].currentTime.toFixed(2) + 's');
+    } else {
+      hideHUD();
+    }
+  },
+
+  stop() {
+    this.isPlaying = false;
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    s4audios.forEach(a => a.pause());
+    try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+  },
+
+  restart() {
+    this.stop();
+    this.phase = 'loading';
+    hideDndLayer();
+    hideSlots();
+    hideOkBtn();
+    clearSlots();
+    dndState.placed = { left: null, right: null };
+    this.currentFrame = 0;
+    this._cache = {};
+    this._loading = {};
+    s4audios.forEach(a => { a.currentTime = 0; });
+    this._audioIdx = 0;
+    this._part1Done = false;
+    this._part2Done = false;
+    hideHUD();
+    this.drawFrame(1);
+    requestAnimationFrame(() => { requestAnimationFrame(() => this._startPart1()); });
+  },
+
+  /* ── Part 1: audio A → B, frames 1→433 ── */
+  _startPart1() {
+    this.phase = 's4-part1';
+    this._audioIdx = 0;
+    s4audios[0].currentTime = 0;
+    s4audios[1].currentTime = 0;
+    this._playNextAudioInPart1();
+  },
+
+  _playNextAudioInPart1() {
+    const idx = this._audioIdx;
+    if (idx >= 2) { this._onPart1End(); return; }
+    this.isPlaying = true;
+    try { parent.postMessage({ action: 'playing' }, '*'); } catch (e) {}
+    s4audios[idx].play().catch(() => {});
+    this._part1Tick();
+  },
+
+  _part1Tick() {
+    if (!this.isPlaying || this.phase !== 's4-part1') return;
+    this._rafId = null;
+    const a = s4audios[this._audioIdx];
+
+    if (a.ended) {
+      if (this._audioIdx === 0) {
+        /* A kết thúc → chuyển sang B */
+        this._audioIdx = 1;
+        this._playNextAudioInPart1();
+        return;
+      } else {
+        this._onPart1End();
+        return;
+      }
+    }
+
+    /* Frame mapping:
+       Audio A: 0s→23s ↔ F1→272   (fps = 272/23 ≈ 11.83)
+       Audio B: 0s→14s ↔ F273→433 (fps = 161/14 ≈ 11.5)
+    */
+    let frame;
+    if (this._audioIdx === 0) {
+      const prog = Math.min(1, a.currentTime / S4.audioDurA);
+      frame = Math.min(272, Math.max(1, Math.round(1 + prog * 271)));
+    } else {
+      const prog = Math.min(1, a.currentTime / S4.audioDurB);
+      frame = Math.min(S4.part1EndFrame, Math.max(273, Math.round(272 + prog * 161)));
+    }
+
+    if (frame !== this.currentFrame) this.drawFrame(frame);
+    else this._updateHud();
+    this._rafId = requestAnimationFrame(() => this._part1Tick());
+  },
+
+  _onPart1End() {
+    this.isPlaying = false;
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    s4audios.forEach(a => a.pause());
+    this.drawFrame(S4.part1EndFrame);
+    this.phase = 's4-dnd';
+    dndState.placed = { left: null, right: null };
+    clearSlots();
+    showSlots();
+    showDndLayer();
+    this._updateHud();
+    try { parent.postMessage({ action: 'paused' }, '*'); } catch (e) {}
+  },
+
+  /* ── Part 2: audio C, frames 505→758 ── */
+  _startPart2() {
+    hideOkBtn();
+    hideDndLayer();
+    hideSlots();
+    hideHUD();
+    this.phase = 's4-part2';
+    this.isPlaying = false;
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    s4audios[2].currentTime = 0;
+    this.isPlaying = true;
+    try { parent.postMessage({ action: 'playing' }, '*'); } catch (e) {}
+    s4audios[2].play().catch(() => {});
+    this._part2Tick();
+  },
+
+  _part2Tick() {
+    if (!this.isPlaying || this.phase !== 's4-part2') return;
+    this._rafId = null;
+    const a = s4audios[2];
+    const dur = a.duration && isFinite(a.duration) ? a.duration : S4.audioDurC;
+
+    if (a.ended || a.currentTime >= dur - 0.05) {
+      this.drawFrame(S4.part2EndFrame);
+      this._onComplete();
+      return;
+    }
+
+    const span = dur;
+    const f0 = S4.part2StartFrame;
+    const f1 = S4.part2EndFrame;
+    const prog = Math.min(1, a.currentTime / span);
+    const frame = Math.min(f1, Math.round(f0 + prog * (f1 - f0)));
+
+    if (frame !== this.currentFrame) this.drawFrame(frame);
+    else this._updateHud();
+    this._rafId = requestAnimationFrame(() => this._part2Tick());
+  },
+
+  _onComplete() {
+    this.isPlaying = false;
+    if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+    s4audios[2].pause();
+    this.phase = 'complete';
+    hideHUD();
+    try {
+      parent.postMessage({ action: 'sessionComplete', session: 4 }, '*');
+    } catch (e) {}
+  },
+};
+
+/* ── Message from parent shell ── */
+window.addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d) return;
+  if (d.action === 'pause') {
+    s4audios.forEach(a => a.pause());
+    player.stop();
+  }
+  if (d.action === 'play') {
+    if (player.phase === 'complete') {
+      player.restart();
+    } else if (!player.isPlaying) {
+      if (player.phase === 's4-part1') {
+        player.isPlaying = true;
+        s4audios[player._audioIdx].play().catch(() => {});
+        player._part1Tick();
+      } else if (player.phase === 's4-dnd') {
+        /* Không làm gì — phải điền đúng mới được play */
+      } else if (player.phase === 's4-part2') {
+        player.isPlaying = true;
+        s4audios[2].play().catch(() => {});
+        player._part2Tick();
+      }
+    }
+  }
+  if (d.action === 'restart') player.restart();
+  if (d.action === 'goToFrame') {
+    player.stop();
+    player.drawFrame(Math.max(1, Math.min(S4.totalFrames, d.frame)));
+  }
+  if (d.action === 'prevFrame') player.drawFrame(Math.max(1, player.currentFrame - 1));
+  if (d.action === 'nextFrame') player.drawFrame(Math.min(S4.totalFrames, player.currentFrame + 1));
+});
+
+/* ── Load & Start ── */
+async function loadAndStart() {
+  const loading = document.getElementById('s4-loading');
+  if (loading) loading.textContent = 'Đang tải…';
+  player._audioIdx = 0;
+  await player._loadOne(1);
+  player.drawFrame(1);
+  if (loading) loading.classList.add('hidden');
+  try { parent.postMessage({ action: 'framesLoaded' }, '*'); } catch (e) {}
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => player._startPart1());
+  });
+}
+
+loadAndStart().catch(err => console.error('session4 loadAndStart', err));
+</script>
+</body>
+</html>

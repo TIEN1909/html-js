@@ -276,6 +276,10 @@ export default function App() {
         setNextEnabled(true);
         setIframePlaying(false);
       }
+      if (e.data?.action === 'sessionComplete' && e.data?.session === 4) {
+        setNextEnabled(true);
+        setIframePlaying(false);
+      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
