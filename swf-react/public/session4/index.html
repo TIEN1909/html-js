@@ -93,6 +93,14 @@
     filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
     transition: opacity 0.2s, filter 0.2s;
     z-index: 1;
+    /* Kích thước cố định — để left/top là pixel chính xác trên canvas 590×410 */
+    width: 50px;
+    height: 50px;
+    /* Loại bỏ margin/padding mặc định */
+    margin: 0;
+    padding: 0;
+    /* Đảm bảo top-left của tile = tọa độ (x,y) */
+    transform: none;
   }
   .s4-tile.dragging {
     cursor: grabbing;
@@ -105,13 +113,14 @@
     pointer-events: none;
     z-index: 2;
   }
+
   .s4-tile.correct {
     filter: drop-shadow(0 0 10px rgba(80,200,80,0.8)) drop-shadow(0 2px 4px rgba(0,0,0,0.4));
   }
   .s4-tile img {
     display: block;
-    width: 100%;
-    height: auto;
+
+    object-fit: contain;
     pointer-events: none;
   }
 
@@ -133,19 +142,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
     font-family: 'Segoe UI', sans-serif;
     font-size: 22px;
     font-weight: bold;
     color: rgba(255,255,255,0.45);
     background: rgba(255,255,255,0.08);
-    border: 2px dashed rgba(255,255,255,0.25);
+    /* outline không làm lệch box so với tọa độ (border ăn vào 50×50 gây lệch thị giác) */
+    border: none;
+    outline-offset: -1px;
     border-radius: 8px;
   }
-  #s4-slot-left   { left: 24%; top: 36%; width: 9%; height: 14%; }
-  #s4-slot-right  { left: 67%; top: 36%; width: 9%; height: 14%; }
+  /* left/top/width/height gán bằng JS từ S4_WOOD_SLOTS — khớp F433.svg */
   .s4-slot.filled {
     background: rgba(80,200,80,0.15);
-    border: 2px solid rgba(80,200,80,0.6);
+    outline: 2px solid rgba(80,200,80,0.75);
+    outline-offset: -1px;
     color: #90ee90;
     text-shadow: 0 0 8px rgba(80,200,80,0.7);
     font-size: 28px;
@@ -320,7 +332,10 @@ function hideHUD() {
 }
 function showOkBtn() { $okBtn.classList.add('visible'); }
 function hideOkBtn() { $okBtn.classList.remove('visible'); }
-function showSlots() { $slots.classList.add('active'); }
+function showSlots() {
+  applyWoodSlotStyles();
+  $slots.classList.add('active');
+}
 function hideSlots() { $slots.classList.remove('active'); }
 function setCounter(n) {
   const el = document.getElementById('frame-counter');
@@ -340,11 +355,16 @@ const dndState = {
 
 function tileNum(tile) { return parseInt(tile.dataset.n, 10); }
 
+/**
+ * Chuẩn hóa tọa độ chuột → không gian logic 590×410 (cùng hệ với left/top của #canvas-wrap).
+ * Dùng #canvas-wrap vì mọi overlay (slot, tile) position absolute theo wrap, không theo canvas.
+ */
 function clientToWrap(cx, cy) {
-  const r = document.getElementById('canvas-wrap').getBoundingClientRect();
+  const wrap = document.getElementById('canvas-wrap');
+  const r = (wrap || canvas).getBoundingClientRect();
   return {
-    x: ((cx - r.left) / r.width)  * 590,
-    y: ((cy - r.top)  / r.height) * 410,
+    x: Math.round(((cx - r.left) / r.width) * 590),
+    y: Math.round(((cy - r.top) / r.height) * 410),
   };
 }
 
@@ -354,26 +374,54 @@ function endDragListeners() {
   document.removeEventListener('pointercancel', onDocUp);
 }
 
-/* ── Vị trí tile ban đầu (random / ước lượng) ── */
+/* ── Vị trí tile (tọa độ pixel chính xác từ người dùng) ── */
 const TILE_START_PX = [
-  { n: 1,  left: 82,  top: 60  },
-  { n: 2,  left: 205, top: 52  },
-  { n: 3,  left: 340, top: 62  },
-  { n: 4,  left: 455, top: 50  },
-  { n: 5,  left: 78,  top: 160 },
-  { n: 6,  left: 210, top: 170 },
-  { n: 7,  left: 340, top: 158 },
-  { n: 8,  left: 455, top: 165 },
-  { n: 9,  left: 155, top: 268 },
-  { n: 10, left: 385, top: 262 },
+  { n: 1,  left: 427, top: 287 },
+  { n: 2,  left: 502, top: 290 },
+  { n: 3,  left: 410, top: 109 },
+  { n: 4,  left: 396, top: 222 },
+  { n: 5,  left: 428, top: 162 },
+  { n: 6,  left: 515, top: 172 },
+  { n: 7,  left: 460, top: 235 },
+  { n: 8,  left: 485, top: 110 },
+  { n: 9,  left: 440, top: 56  },
+  { n: 10, left: 513, top: 55  },
 ];
 
-/** Vùng slot (%, chuyển sang px khi tính toán) */
-const SLOT_PX = {
-  left:  { x: Math.round(0.24 * 590), y: Math.round(0.36 * 410), w: Math.round(0.09 * 590), h: Math.round(0.14 * 410) },
-  right: { x: Math.round(0.67 * 590), y: Math.round(0.36 * 410), w: Math.round(0.09 * 590), h: Math.round(0.14 * 410) },
+/**
+ * 2 khung gỗ — lấy từ segement1/frames/433.svg (use xlink:href sprite #115):
+ * trái: matrix(..., 234.85, 291.7) width=59.15 height=46.55
+ * phải: matrix(..., 348.85, 291.7) width=59.15 height=46.55
+ */
+const S4_WOOD_SLOTS = {
+  left:  { x: 206.85, y: 269.7, w: 59.15, h: 46.55 },
+  right: { x: 320.85, y: 270.7, w: 59.15, h: 46.55 },
 };
-const SLOT_SLOP = 10;
+/** Alias cho hit-test / snap */
+const SLOT_PX = S4_WOOD_SLOTS;
+const SLOT_SLOP = 18;
+
+/**
+ * Offset tùy chỉnh cho từng số khi snap vào slot.
+ * Chỉnh bằng DevTools: SNAP_OFFSETS[10] = { dx: 0, dy: 0 }
+ * dx > 0 = sang phải, dy > 0 = xuống dưới
+ */
+const SNAP_OFFSETS = {
+  10: { dx: 0, dy: 0 },  // ô phải (slotRight)
+  3:  { dx: 0, dy: 0 },  // ô trái (slotLeft)
+};
+
+function applyWoodSlotStyles() {
+  ['left', 'right'].forEach((id) => {
+    const el = document.getElementById('s4-slot-' + id);
+    const s = S4_WOOD_SLOTS[id];
+    if (!el || !s) return;
+    el.style.left = s.x + 'px';
+    el.style.top = s.y + 'px';
+    el.style.width = s.w + 'px';
+    el.style.height = s.h + 'px';
+  });
+}
 
 function pointInSlot(px, py, slot) {
   const { x, y, w, h } = slot;
@@ -403,6 +451,9 @@ function buildTiles() {
     d.dataset.n = String(n);
     d.style.left = left + 'px';
     d.style.top  = top  + 'px';
+    /* CSS custom props — chỉnh trực tiếp trong DevTools Styles tab */
+    d.style.setProperty('--snap-dx', '0');
+    d.style.setProperty('--snap-dy', '0');
     const img = document.createElement('img');
     img.src = S4.imagesPath + n + '.svg';
     img.alt = String(n);
@@ -437,10 +488,13 @@ $dnd.addEventListener('pointerdown', (e) => {
   const pos = clientToWrap(e.clientX, e.clientY);
   const left = parseFloat(tile.style.left);
   const top  = parseFloat(tile.style.top);
+  const tileW = tile.offsetWidth  || 50;
+  const tileH = tile.offsetHeight || 50;
   dndState.tile = tile;
   dndState.pointerId = e.pointerId;
-  dndState.offsetX = pos.x - left;
-  dndState.offsetY = pos.y - top;
+  /* Offset = cursor - center của tile (để kéo đúng vào vị trí chuột) */
+  dndState.offsetX = pos.x - (left + tileW / 2);
+  dndState.offsetY = pos.y - (top  + tileH / 2);
   dndState.origLeft = left;
   dndState.origTop  = top;
   tile.classList.add('dragging');
@@ -452,8 +506,11 @@ $dnd.addEventListener('pointerdown', (e) => {
 function onDocMove(e) {
   if (!dndState.tile || dndState.pointerId !== e.pointerId) return;
   const p = clientToWrap(e.clientX, e.clientY);
-  dndState.tile.style.left = p.x - dndState.offsetX + 'px';
-  dndState.tile.style.top  = p.y - dndState.offsetY + 'px';
+  const tileW = dndState.tile.offsetWidth  || 50;
+  const tileH = dndState.tile.offsetHeight || 50;
+  /* Di chuyển tile sao cho center của tile = cursor */
+  dndState.tile.style.left = Math.round(p.x - tileW / 2) + 'px';
+  dndState.tile.style.top  = Math.round(p.y - tileH / 2) + 'px';
 }
 
 function onDocUp(e) {
@@ -464,24 +521,32 @@ function onDocUp(e) {
   try { tile.releasePointerCapture(e.pointerId); } catch (err) {}
 
   const n = tileNum(tile);
-  const w = tile.offsetWidth  || 44;
-  const h = tile.offsetHeight || 44;
-  const cx = parseFloat(tile.style.left) + w / 2;
-  const cy = parseFloat(tile.style.top)  + h / 2;
+  const tileW = tile.offsetWidth  || 50;
+  const tileH = tile.offsetHeight || 50;
+
+  /* Lấy vị trí center của tile (pixel chính xác trên canvas 590×410) */
+  const cx = parseFloat(tile.style.left) + tileW / 2;
+  const cy = parseFloat(tile.style.top)  + tileH / 2;
+
+  /* Đọc lại tọa độ sau khi drag — có thể bị round nên đọc lại */
+  const finalLeft = parseFloat(tile.style.left);
+  const finalTop  = parseFloat(tile.style.top);
+  const finalCx   = finalLeft + tileW / 2;
+  const finalCy   = finalTop  + tileH / 2;
 
   let placed = false;
 
   /* Kiểm tra ô trái */
-  if (pointInSlot(cx, cy, SLOT_PX.left) && dndState.placed.left === null && n === S4.slotLeft) {
-    snapTile(tile, SLOT_PX.left, w, h);
+  if (pointInSlot(finalCx, finalCy, SLOT_PX.left) && dndState.placed.left === null && n === S4.slotLeft) {
+    snapTileCenter(tile, SLOT_PX.left, tileW, tileH, n);
     tile.classList.add('placed', 'correct');
     dndState.placed.left = n;
     fillSlot('left', n);
     placed = true;
   }
   /* Kiểm tra ô phải */
-  else if (pointInSlot(cx, cy, SLOT_PX.right) && dndState.placed.right === null && n === S4.slotRight) {
-    snapTile(tile, SLOT_PX.right, w, h);
+  else if (pointInSlot(finalCx, finalCy, SLOT_PX.right) && dndState.placed.right === null && n === S4.slotRight) {
+    snapTileCenter(tile, SLOT_PX.right, tileW, tileH, n);
     tile.classList.add('placed', 'correct');
     dndState.placed.right = n;
     fillSlot('right', n);
@@ -504,9 +569,12 @@ function onDocUp(e) {
   }
 }
 
-function snapTile(tile, slot, w, h) {
-  tile.style.left = (slot.x + (slot.w - w) / 2) + 'px';
-  tile.style.top  = (slot.y + (slot.h - h) / 2) + 'px';
+function snapTileCenter(tile, slot, w, h, n) {
+  /* Offset: đọc từ CSS custom property trên tile, fallback sang SNAP_OFFSETS */
+  const ox = parseFloat(tile.style.getPropertyValue('--snap-dx')) || (SNAP_OFFSETS[n] && SNAP_OFFSETS[n].dx) || 0;
+  const oy = parseFloat(tile.style.getPropertyValue('--snap-dy')) || (SNAP_OFFSETS[n] && SNAP_OFFSETS[n].dy) || 0;
+  tile.style.left = Math.round(slot.x + slot.w / 2 - w / 2 + ox) + 'px';
+  tile.style.top  = Math.round(slot.y + slot.h / 2 - h / 2 + oy) + 'px';
 }
 
 /* ── OK button ── */
@@ -779,6 +847,7 @@ async function loadAndStart() {
   });
 }
 
+applyWoodSlotStyles();
 loadAndStart().catch(err => console.error('session4 loadAndStart', err));
 </script>
 </body>
